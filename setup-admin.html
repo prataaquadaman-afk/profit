@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prata Aqua — Initial Setup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:#080f1a; --surface:#0d1b2e; --surface2:#132033;
+            --border:#1e3352; --accent:#00c6ff; --accent2:#0072ff;
+            --green:#00e59b; --red:#ff4d6a; --text:#e8f1ff; --text2:#8aaac8; --text3:#4d6e8a;
+            --r:12px; --r2:8px;
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .wrap { width:100%; max-width:560px; }
+        h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--green)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px; }
+        .sub { font-size:13px; color:var(--text3); margin-bottom:28px; line-height:1.6; }
+        .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:20px; }
+        .card-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.8px; margin-bottom:18px; }
+        .user-row { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; margin-bottom:12px; align-items:end; }
+        .form-group { display:flex; flex-direction:column; gap:5px; }
+        .form-group label { font-size:11px; font-weight:600; color:var(--text3); letter-spacing:.3px; }
+        .form-group input, .form-group select {
+            background:var(--surface2); border:1px solid var(--border); border-radius:var(--r2);
+            padding:9px 13px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none;
+        }
+        .form-group input:focus { border-color:var(--accent); }
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:10px 18px; border-radius:var(--r2); border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; transition:all .2s; }
+        .btn-primary { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#fff; }
+        .btn-primary:hover { opacity:.9; }
+        .btn-danger { background:rgba(255,77,106,.15); color:var(--red); border:1px solid rgba(255,77,106,.3); padding:8px 10px; }
+        .btn-add { background:rgba(0,198,255,.1); color:var(--accent); border:1px solid rgba(0,198,255,.25); width:100%; margin-top:4px; }
+        .btn:disabled { opacity:.45; cursor:not-allowed; }
+        .role-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; }
+        .role-admin { background:rgba(255,107,53,.15); color:#ff9a70; border:1px solid rgba(255,107,53,.3); }
+        .role-user  { background:rgba(0,198,255,.12); color:var(--accent); border:1px solid rgba(0,198,255,.25); }
+        #log { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r2); padding:14px 16px; font-family:monospace; font-size:12px; max-height:260px; overflow-y:auto; line-height:1.8; }
+        .log-ok   { color:var(--green); }
+        .log-err  { color:var(--red); }
+        .log-info { color:var(--text2); }
+        .divider { border:none; border-top:1px solid var(--border); margin:18px 0; }
+        .notice { background:rgba(255,179,71,.08); border:1px solid rgba(255,179,71,.25); border-radius:var(--r2); padding:14px 16px; font-size:12px; color:#ffb347; line-height:1.7; margin-bottom:20px; }
+        .notice strong { font-weight:700; }
+        select { -webkit-appearance:none; appearance:none; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>🔧 Prata Aqua — Initial Setup</h1>
+    <p class="sub">Run this page <strong>once</strong> to register all admin/user accounts in Firebase Authentication and store the delete PIN securely in Firestore. After setup, delete or restrict access to this file.</p>
+
+    <div class="notice">
+        ⚠️ <strong>One-time use only.</strong> After running setup successfully, remove or rename this file from your Netlify deployment so it cannot be accessed again. You do not need to run it again unless you want to add new users.
+    </div>
+
+    <!-- USERS SECTION -->
+    <div class="card">
+        <div class="card-title">👤 Admin &amp; User Accounts</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6;">
+            Add all users below. <strong style="color:var(--text2)">Admin</strong> users can access the Admin Panel (topbar button).
+            <strong style="color:var(--text2)">User</strong> accounts can access Profit, Stock, Cost Prices &amp; Export.
+            Use the same passwords your team currently uses — they'll be stored securely in Firebase Auth.
+        </p>
+
+        <div id="userRows"></div>
+
+        <button class="btn btn-add" onclick="addUserRow()">+ Add Another User</button>
+
+        <hr class="divider">
+
+        <!-- DELETE PIN -->
+        <div class="form-group" style="max-width:220px;">
+            <label>DELETE PIN (stored in Firestore, not in HTML)</label>
+            <input type="password" id="deletePin" placeholder="e.g. 1163" autocomplete="new-password">
+        </div>
+    </div>
+
+    <button class="btn btn-primary" id="runBtn" onclick="runSetup()" style="width:100%;padding:14px;">
+        🚀 Run Setup — Create All Users &amp; Save PIN
+    </button>
+
+    <!-- LOG -->
+    <div class="card" style="margin-top:20px;">
+        <div class="card-title">📋 Setup Log</div>
+        <div id="log"><span class="log-info">Waiting to start…</span></div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp }                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser }
+                                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig }                 from "./firebase-config.js";
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function log(msg, type = "info") {
+    const el = document.getElementById("log");
+    el.innerHTML += `<div class="log-${type}">${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+}
+
+function clearLog() {
+    document.getElementById("log").innerHTML = "";
+}
+
+// Email format: user_jimit@prataaqua.internal  or  admin_jimit@prataaqua.internal
+function buildEmail(name, role) {
+    const safe = name.trim().toLowerCase().replace(/\s+/g, "_");
+    const prefix = role === "admin" ? "admin_" : "user_";
+    return `${prefix}${safe}@prataaqua.internal`;
+}
+
+// ── User rows ─────────────────────────────────────────────────────────────────
+let rowCount = 0;
+
+window.addUserRow = function(name = "", password = "", role = "user") {
+    rowCount++;
+    const id = rowCount;
+    const row = document.createElement("div");
+    row.className = "user-row";
+    row.id = `row-${id}`;
+    row.innerHTML = `
+        <div class="form-group">
+            <label>NAME (e.g. jimit)</label>
+            <input type="text" id="uname-${id}" placeholder="jimit" value="${name}" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>PASSWORD</label>
+            <input type="password" id="upass-${id}" placeholder="password" value="${password}" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label>ROLE</label>
+            <select id="urole-${id}">
+                <option value="user"  ${role === "user"  ? "selected" : ""}>User</option>
+                <option value="admin" ${role === "admin" ? "selected" : ""}>Admin</option>
+            </select>
+        </div>
+        <button class="btn btn-danger" onclick="document.getElementById('row-${id}').remove()">✕</button>
+    `;
+    document.getElementById("userRows").appendChild(row);
+};
+
+// Pre-fill with the original users from the old hardcoded list
+// (jimit, karan, smit — all as "user" by default; change role as needed)
+window.addUserRow("jimit",  "", "admin");
+window.addUserRow("karan",  "", "user");
+window.addUserRow("smit",   "", "user");
+
+// ── Main setup ────────────────────────────────────────────────────────────────
+window.runSetup = async function() {
+    clearLog();
+    const btn = document.getElementById("runBtn");
+    btn.disabled = true;
+    btn.textContent = "⏳ Running…";
+
+    // Collect users
+    const rows = document.querySelectorAll("[id^='row-']");
+    const users = [];
+    let valid = true;
+
+    rows.forEach(row => {
+        const id  = row.id.split("-")[1];
+        const name = document.getElementById(`uname-${id}`)?.value.trim();
+        const pass = document.getElementById(`upass-${id}`)?.value;
+        const role = document.getElementById(`urole-${id}`)?.value;
+        if (!name || !pass) { valid = false; return; }
+        users.push({ name, pass, role });
+    });
+
+    if (!valid || users.length === 0) {
+        log("❌ Please fill in all user name and password fields.", "err");
+        btn.disabled = false;
+        btn.textContent = "🚀 Run Setup — Create All Users & Save PIN";
+        return;
+    }
+
+    const deletePin = document.getElementById("deletePin").value;
+    if (!deletePin) {
+        log("❌ Please enter the delete PIN.", "err");
+        btn.disabled = false;
+        btn.textContent = "🚀 Run Setup — Create All Users & Save PIN";
+        return;
+    }
+
+    log("── Starting Firebase Auth setup ──────────────────────", "info");
+
+    // Create / update users in Firebase Auth
+    for (const u of users) {
+        const email = buildEmail(u.name, u.role);
+        const badge = u.role === "admin" ? "ADMIN" : "USER";
+        try {
+            await createUserWithEmailAndPassword(auth, email, u.pass);
+            log(`✅ [${badge}] Created: ${u.name}  →  ${email}`, "ok");
+        } catch (err) {
+            if (err.code === "auth/email-already-in-use") {
+                // Try to sign in and update (Firebase Auth doesn't have updatePassword
+                // from outside — user must be signed in. We'll note this.)
+                log(`⚠️  [${badge}] Already exists: ${email} — password NOT changed. To update a password, use Firebase Console → Authentication.`, "info");
+            } else {
+                log(`❌ [${badge}] Failed for ${email}: ${err.message}`, "err");
+            }
+        }
+    }
+
+    // Save delete PIN to Firestore
+    log("── Saving delete PIN to Firestore ───────────────────", "info");
+    try {
+        await setDoc(doc(db, "appConfig", "security"), { deletePin });
+        log("✅ Delete PIN saved to Firestore (appConfig/security)", "ok");
+    } catch (err) {
+        log(`❌ Could not save PIN to Firestore: ${err.message}`, "err");
+        log("   Make sure Firestore is initialised and rules allow writes.", "info");
+    }
+
+    log("── Done ─────────────────────────────────────────────", "info");
+    log("✔ Setup complete. You can now delete this setup-admin.html file from your deployment.", "ok");
+    log("⚠  Remember to configure Firestore Security Rules (see README).", "info");
+
+    btn.textContent = "✅ Setup Complete";
+};
+</script>
+</body>
+</html>

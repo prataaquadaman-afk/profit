@@ -1,0 +1,3133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Prata Aqua – Profit Tracker</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Firebase + Auth — config and secrets live in separate JS files, not here -->
+    <script type="module" src="./auth.js"></script>
+
+    <style>
+        :root {
+            --bg: #080f1a;
+            --surface: #0d1b2e;
+            --surface2: #132033;
+            --surface3: #1a2a40;
+            --border: #1e3352;
+            --border2: #2a4a6e;
+            --accent: #00c6ff;
+            --accent2: #0072ff;
+            --accent-glow: rgba(0, 198, 255, 0.18);
+            --green: #00e59b;
+            --green-dim: rgba(0, 229, 155, 0.12);
+            --red: #ff4d6a;
+            --red-dim: rgba(255, 77, 106, 0.12);
+            --amber: #ffb347;
+            --amber-dim: rgba(255, 179, 71, 0.12);
+            --text: #e8f1ff;
+            --text2: #8aaac8;
+            --text3: #4d6e8a;
+            --r: 12px;
+            --r2: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* BACKGROUND GLOW */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: -200px;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(0, 198, 255, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── TOP NAV ── */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 60px;
+            background: rgba(8, 15, 26, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 17px;
+            background: linear-gradient(135deg, var(--accent), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .topbar-logo span {
+            font-weight: 400;
+            opacity: 0.7;
+        }
+
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 6px;
+        }
+
+        /* ── LAYOUT ── */
+        .app {
+            display: flex;
+            min-height: calc(100vh - 60px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: sticky;
+            top: 60px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .nav-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: var(--text3);
+            text-transform: uppercase;
+            padding: 8px 12px 4px;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--r2);
+            border: none;
+            background: none;
+            color: var(--text2);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+        }
+
+        .nav-btn i {
+            width: 18px;
+            font-size: 13px;
+        }
+
+        .nav-btn:hover {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-glow);
+            color: var(--accent);
+            border: 1px solid rgba(0, 198, 255, 0.2);
+        }
+
+        .main {
+            flex: 1;
+            padding: 24px 20px;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* ── PAGES ── */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .page-sub {
+            color: var(--text2);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 16px;
+        }
+
+        /* ── STAT CHIPS ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 14px 16px;
+        }
+
+        .stat-chip .label {
+            font-size: 11px;
+            color: var(--text3);
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-chip .value {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .stat-chip .value.green {
+            color: var(--green);
+        }
+
+        .stat-chip .value.accent {
+            color: var(--accent);
+        }
+
+        /* ── FORM ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text2);
+            letter-spacing: 0.3px;
+        }
+
+        .form-group input,
+        .form-group select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 10px 14px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238aaac8' fill='none' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .form-group input[readonly] {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 20px;
+            border-radius: var(--r2);
+            border: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: var(--surface2);
+            color: var(--text2);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            border-color: var(--border2);
+        }
+
+        .btn-danger {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(255, 77, 106, 0.25);
+        }
+
+        .btn-success {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(0, 229, 155, 0.25);
+        }
+
+        .btn-sm {
+            padding: 7px 12px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--r2);
+        }
+
+        .pivot-table {
+            min-width: 3000px;
+            /* Wide table for pivot */
+        }
+
+        .pivot-table th,
+        .pivot-table td {
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .pivot-table th {
+            text-align: center;
+            padding: 8px 10px;
+        }
+
+        .pivot-table td {
+            text-align: right;
+            padding: 8px 10px;
+        }
+
+        /* Freeze first column (Date) */
+        .pivot-table th:first-child,
+        .pivot-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: var(--surface);
+            z-index: 10;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .pivot-table thead th:first-child {
+            background: var(-- поверхность2, var(--surface2));
+            /* surface2 fallback */
+            background: var(--surface2);
+            z-index: 11;
+        }
+
+        .pivot-table tbody tr:hover td:first-child {
+            background: var(--surface2);
+            /* Match hover state */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 520px;
+        }
+
+        thead th {
+            background: var(--surface2);
+            color: var(--text3);
+            font-weight: 600;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody td {
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text2);
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover td {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        .num {
+            text-align: right;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .tag-blue {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .tag-green {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+
+        .tag-red {
+            background: var(--red-dim);
+            color: var(--red);
+        }
+
+        .tag-amber {
+            background: var(--amber-dim);
+            color: var(--amber);
+        }
+
+        /* ── DATE GROUP HEADER ── */
+        .date-group-header {
+            background: var(--surface3);
+            padding: 10px 14px;
+            font-family: 'Syne', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            border-radius: var(--r2);
+            margin-bottom: 8px;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .date-group-header:first-child {
+            margin-top: 0;
+        }
+
+        /* ── PROFIT FOOTER ── */
+        .profit-total {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--green-dim);
+            border: 1px solid rgba(0, 229, 155, 0.25);
+            border-radius: var(--r2);
+            padding: 12px 16px;
+            margin-top: 12px;
+        }
+
+        .profit-total .label {
+            font-size: 13px;
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .profit-total .val {
+            font-family: 'Syne', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        /* ── DATE FILTER ── */
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-row .form-group {
+            margin: 0;
+        }
+
+        /* ── COST PRICE TABLE ── */
+        .cp-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cp-row:last-child {
+            border-bottom: none;
+        }
+
+        .cp-name {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .cp-input {
+            width: 130px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 8px 12px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .cp-input:focus {
+            border-color: var(--accent);
+        }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 9999;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(0, 229, 155, 0.3);
+        }
+
+        .toast.error {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(255, 77, 106, 0.3);
+        }
+
+        /* ── LOADER ── */
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 15, 26, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+            gap: 16px;
+        }
+
+        .loader-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loader-text {
+            color: var(--text2);
+            font-size: 13px;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text3);
+        }
+
+        .empty i {
+            font-size: 36px;
+            margin-bottom: 12px;
+            display: block;
+            opacity: 0.4;
+        }
+
+        .empty p {
+            font-size: 14px;
+        }
+
+        /* ── MOBILE ── */
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 60px;
+                left: -240px;
+                z-index: 200;
+                width: 240px;
+                height: calc(100vh - 60px);
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                top: 60px;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 199;
+                display: none;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .main {
+                padding: 16px 12px;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: 1;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .cp-row {
+                flex-wrap: wrap;
+            }
+
+            .cp-input {
+                width: 100%;
+            }
+
+            .date-group-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* ── ADMIN BADGE ── */
+        .admin-badge {
+            background: linear-gradient(135deg, #ff6b35, #f7c59f);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-left: 6px;
+        }
+
+        /* ── SUMMARY PROFIT ROW ── */
+        .profit-summary-row {
+            background: linear-gradient(135deg, rgba(0, 229, 155, 0.08), rgba(0, 198, 255, 0.05));
+            border: 1px solid rgba(0, 229, 155, 0.2);
+        }
+
+        .profit-summary-row td {
+            color: var(--green) !important;
+            font-weight: 700 !important;
+        }
+
+        /* ── STOCK MODULE ── */
+        .stock-product-header {
+            background: linear-gradient(135deg, rgba(0, 198, 255, 0.10), rgba(0, 114, 255, 0.06));
+            border: 1px solid rgba(0, 198, 255, 0.22);
+            border-radius: var(--r2);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            margin-top: 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .stock-product-header:first-child {
+            margin-top: 0;
+        }
+
+        .stock-product-header .prod-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stock-product-header .prod-meta {
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        .stock-init-row td {
+            background: rgba(255, 179, 71, 0.06);
+        }
+
+        .stock-closing-cell {
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .stock-low {
+            color: var(--red) !important;
+        }
+
+        .stock-action-cell {
+            white-space: nowrap;
+        }
+
+        .stock-input {
+            width: 90px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 6px 10px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .stock-input:focus {
+            border-color: var(--accent);
+        }
+
+        /* ── COMMON RATE DASHBOARD ── */
+        .rate-group-header {
+            background: var(--surface3);
+            padding: 9px 14px;
+            font-family: 'Syne', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amber);
+            border-radius: var(--r2);
+            margin-bottom: 6px;
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rate-group-header:first-child {
+            margin-top: 0;
+        }
+
+        .rate-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--amber-dim);
+            color: var(--amber);
+            border: 1px solid rgba(255, 179, 71, 0.3);
+        }
+
+        .rate-total-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 10px 16px;
+            margin-top: 10px;
+        }
+
+        /* ── LOGIN OVERLAY ── */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #080f1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        #login-overlay.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: #0d1b2e;
+            border: 1px solid #1e3352;
+            border-radius: 16px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .login-logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00c6ff, #00e59b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .login-sub {
+            font-size: 13px;
+            color: #8aaac8;
+            margin-bottom: 28px;
+        }
+
+        .login-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .login-field label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8aaac8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .login-field input {
+            background: #132033;
+            border: 1px solid #1e3352;
+            border-radius: 8px;
+            padding: 11px 14px;
+            color: #e8f1ff;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+            width: 100%;
+        }
+
+        .login-field input:focus {
+            border-color: #00c6ff;
+        }
+
+        .login-error {
+            color: #ff4d6a;
+            font-size: 12px;
+            margin-bottom: 12px;
+            min-height: 16px;
+            font-weight: 600;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0072ff, #00c6ff);
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            margin-top: 4px;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .login-lock {
+            font-size: 40px;
+            margin-bottom: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══ LOGIN OVERLAY ═══ -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="login-lock">&#128274;</div>
+            <div class="login-logo">PRATA AQUA</div>
+            <div class="login-sub">Sign in to access the Profit Tracker</div>
+            <div class="login-field">
+                <label>User ID</label>
+                <input type="email" id="login-user" placeholder="Enter user ID" autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label>Password</label>
+                <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+            </div>
+            <div class="login-error" id="login-error"></div>
+            <button class="login-btn" onclick="doLogin()">Sign In</button>
+        </div>
+    </div>
+
+    <!-- LOADER -->
+    <div class="loader-overlay" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Loading Prata Aqua Tracker...</div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <button class="hamburger" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+        <div class="topbar-logo">PRATA AQUA <span>Profit Tracker</span></div>
+        <button class="btn btn-ghost btn-sm" id="adminToggle" onclick="toggleAdmin()">
+            <i class="fas fa-shield-halved"></i> <span id="adminBtnText">Admin</span>
+        </button>
+    </div>
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="app">
+        <!-- SIDEBAR -->
+        <nav class="sidebar" id="sidebar">
+            <div class="nav-section-label">Main</div>
+            <button class="nav-btn active" onclick="showPage('entry')" data-page="entry">
+                <i class="fas fa-plus-circle"></i> Data Entry
+            </button>
+            <button class="nav-btn" onclick="showPage('daily')" data-page="daily">
+                <i class="fas fa-calendar-day"></i> Daily Sales
+            </button>
+            <button class="nav-btn" onclick="showPage('analysis')" data-page="analysis">
+                <i class="fas fa-chart-bar"></i> Avg Analysis
+            </button>
+
+            <div class="nav-section-label" style="margin-top:12px">Reports</div>
+            <button class="nav-btn" onclick="requestAccess('profit')" data-page="profit">
+                <i class="fas fa-indian-rupee-sign"></i> Profit Report
+            </button>
+
+            <div class="nav-section-label" style="margin-top:12px">Inventory</div>
+            <button class="nav-btn" onclick="requestAccess('stock')" data-page="stock">
+                <i class="fas fa-boxes-stacked"></i> Stock Records
+            </button>
+            <button class="nav-btn" onclick="showPage('rateboard')" data-page="rateboard">
+                <i class="fas fa-layer-group"></i> Common Rate Board
+            </button>
+
+            <div class="nav-section-label" style="margin-top:12px">Settings</div>
+            <button class="nav-btn" onclick="requestAccess('costprice')" data-page="costprice">
+                <i class="fas fa-tags"></i> Cost Prices
+            </button>
+            <button class="nav-btn" id="adminNavBtn" style="display:none" onclick="showPage('admin')" data-page="admin">
+                <i class="fas fa-user-shield"></i> Admin Panel <span class="admin-badge">Admin</span>
+            </button>
+
+            <div class="nav-section-label" style="margin-top:12px">Export</div>
+            <button class="nav-btn" onclick="requestAccess('export')">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <div class="main">
+
+            <!-- ═══ PAGE: DATA ENTRY ═══ -->
+            <div class="page active" id="page-entry">
+                <div class="page-header">
+                    <div class="page-title">New Sale Entry</div>
+                    <div class="page-sub">Add today's cases sold</div>
+                </div>
+
+                <div class="stats-row" id="todayStats">
+                    <div class="stat-chip">
+                        <div class="label">TODAY'S ENTRIES</div>
+                        <div class="value accent" id="statEntries">—</div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="label">TOTAL CASES</div>
+                        <div class="value" id="statCases">—</div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="label">TODAY'S SALES</div>
+                        <div class="value green" id="statSales">—</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Entry Form</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>DATE</label>
+                            <input type="date" id="entryDate">
+                        </div>
+                        <div class="form-group">
+                            <label>PRODUCT</label>
+                            <select id="entryProduct">
+                                <option value="">— Select Product —</option>
+                                <option value="John Martin 200ml">John Martin 200ml</option>
+                                <option value="John Martin 500ml">John Martin 500ml</option>
+                                <option value="John Martin 1L">John Martin 1L</option>
+                                <option value="Prata Aqua 750ml (26.5g)">Prata Aqua 750ml (26.5g)</option>
+                                <option value="Prata Aqua 750ml (19.5g)">Prata Aqua 750ml (19.5g)</option>
+                                <option value="Prata Aqua 400ml">Prata Aqua 400ml</option>
+                                <option value="Prata Aqua 200ml">Prata Aqua 200ml</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>QUANTITY (Cases)</label>
+                            <input type="number" id="entryQty" min="0" placeholder="0" oninput="calcAmount()">
+                        </div>
+                        <div class="form-group">
+                            <label>RATE (per Case ₹)</label>
+                            <input type="number" id="entryRate" min="0" placeholder="0.00" oninput="calcAmount()">
+                        </div>
+                        <div class="form-group full">
+                            <label>AMOUNT (Auto-calculated ₹)</label>
+                            <input type="text" id="entryAmount" readonly placeholder="₹ 0.00">
+                        </div>
+                    </div>
+                    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="saveBtn" onclick="saveEntry()">
+                            <i class="fas fa-save"></i> Save Entry
+                        </button>
+                        <button class="btn btn-ghost" onclick="clearForm()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Today's entries preview -->
+                <div class="card">
+                    <div class="card-title">Today's Entries</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="num">Cases</th>
+                                    <th class="num">Rate</th>
+                                    <th class="num">Amount</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="todayEntriesBody">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty"><i class="fas fa-inbox"></i>
+                                            <p>No entries today</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: DAILY SALES ═══ -->
+            <div class="page" id="page-daily">
+                <div class="page-header">
+                    <div class="page-title">Daily Sales View</div>
+                    <div class="page-sub">Grouped by date — products sold per day</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="dailyFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="dailyTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderDailySales()"><i class="fas fa-filter"></i>
+                        Filter</button>
+                    <button class="btn btn-ghost" onclick="clearDateFilter('daily')"><i class="fas fa-refresh"></i>
+                        All</button>
+                </div>
+                <div id="dailySalesContent">
+                    <div class="empty"><i class="fas fa-chart-line"></i>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: ANALYSIS ═══ -->
+            <div class="page" id="page-analysis">
+                <div class="page-header">
+                    <div class="page-title">Average Selling Analysis</div>
+                    <div class="page-sub">Average selling price per case across all data</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="analysisFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="analysisTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderAnalysis()"><i class="fas fa-filter"></i>
+                        Filter</button>
+                    <button class="btn btn-ghost" onclick="clearDateFilter('analysis')"><i class="fas fa-refresh"></i>
+                        All</button>
+                </div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="num">Total Cases</th>
+                                    <th class="num">Total Sales (₹)</th>
+                                    <th class="num">Avg Price/Case (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysisBody">
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty"><i class="fas fa-chart-bar"></i>
+                                            <p>Loading...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: PROFIT ═══ -->
+            <div class="page" id="page-profit">
+                <div class="page-header">
+                    <div class="page-title">Profit Report</div>
+                    <div class="page-sub">Daily profit based on average selling vs cost price</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="profitFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="profitTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderProfit()"><i class="fas fa-filter"></i>
+                        Filter</button>
+                    <button class="btn btn-ghost" onclick="clearDateFilter('profit')"><i class="fas fa-refresh"></i>
+                        All</button>
+                </div>
+                <div id="profitContent">
+                    <div class="empty"><i class="fas fa-indian-rupee-sign"></i>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: COST PRICES ═══ -->
+            <div class="page" id="page-costprice">
+                <div class="page-header">
+                    <div class="page-title">Cost Price Management</div>
+                    <div class="page-sub">View or set cost prices for any date — each day stores its own prices
+                        independently</div>
+                </div>
+                <div class="card">
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+                        <div class="card-title" style="margin-bottom:0">Cost Prices (₹ per Case)</div>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div class="form-group" style="margin:0;">
+                                <label style="font-size:11px;">SELECT DATE</label>
+                                <input type="date" id="cpDatePicker" style="padding:7px 10px;font-size:13px;"
+                                    onchange="renderCostPrices()">
+                            </div>
+                            <span id="cpDateBadge"
+                                style="background:var(--accent-glow);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,198,255,0.2);margin-top:18px;"></span>
+                        </div>
+                    </div>
+                    <div
+                        style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:var(--r2);border-left:3px solid var(--accent);">
+                        <i class="fas fa-info-circle"></i> Prices saved here apply <strong>only to the selected
+                            date</strong>. Other dates keep their own independently saved cost prices.
+                    </div>
+                    <div id="costPriceList"></div>
+                    <div style="margin-top:20px;">
+                        <button class="btn btn-primary" onclick="saveCostPrices()">
+                            <i class="fas fa-save"></i> Save Cost Prices for Selected Date
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: ADMIN ═══ -->
+            <div class="page" id="page-admin">
+                <div class="page-header">
+                    <div class="page-title">Admin Panel <span class="admin-badge">Admin</span></div>
+                    <div class="page-sub">View, edit, and delete all sales entries</div>
+                </div>
+
+                <div class="stats-row" id="adminStats" style="grid-template-columns:repeat(4,1fr)">
+                    <div class="stat-chip">
+                        <div class="label">TOTAL RECORDS</div>
+                        <div class="value accent" id="adminTotal">—</div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="label">TOTAL CASES</div>
+                        <div class="value" id="adminCases">—</div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="label">TOTAL REVENUE</div>
+                        <div class="value green" id="adminRevenue">—</div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="label">TOTAL PROFIT</div>
+                        <div class="value green" id="adminProfit">—</div>
+                    </div>
+                </div>
+
+                <!-- Date filter row -->
+                <div class="filter-row" style="margin-bottom:16px;">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="adminFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="adminTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderAdmin()"><i class="fas fa-filter"></i>
+                        Filter</button>
+                    <button class="btn btn-ghost" onclick="clearAdminFilter()"><i class="fas fa-refresh"></i>
+                        Reset</button>
+                </div>
+
+                <div class="card">
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                        <div class="card-title" style="margin-bottom:0;">All Sales Records <span id="adminFilterLabel"
+                                style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;"></span></div>
+                        <button class="btn btn-success btn-sm" onclick="exportAdminExcel()">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="pivot-table" id="adminTable">
+                            <thead id="adminHead">
+                                <tr>
+                                    <th>Loading...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminBody">
+                                <tr>
+                                    <td>
+                                        <div class="empty"><i class="fas fa-database"></i>
+                                            <p>Loading...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: STOCK RECORDS ═══ -->
+            <div class="page" id="page-stock">
+                <div class="page-header">
+                    <div class="page-title">Stock Records</div>
+                    <div class="page-sub">Daily stock movement — Opening · Production · Sales (auto) · Closing</div>
+                </div>
+
+                <!-- Stock Entry Form -->
+                <div class="card" id="stockEntryCard">
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+                        <div class="card-title" style="margin-bottom:0;">Add / Update Stock Entry</div>
+                        <button class="btn btn-success btn-sm" onclick="exportStockExcel()">
+                            <i class="fas fa-file-excel"></i> Export Stock Excel
+                        </button>
+                    </div>
+                    <div
+                        style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:var(--r2);border-left:3px solid var(--amber);">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>First entry per product:</strong> enter Opening Stock + Production.
+                        <strong>Subsequent days:</strong> enter Production only — Opening auto-carries from previous
+                        closing.
+                        Sales are fetched automatically from Daily Sales Entry.
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>DATE</label>
+                            <input type="date" id="stockDate">
+                        </div>
+                        <div class="form-group">
+                            <label>PRODUCT</label>
+                            <select id="stockProduct" onchange="onStockProductChange()">
+                                <option value="">— Select Product —</option>
+                                <option value="John Martin 200ml">John Martin 200ml</option>
+                                <option value="John Martin 500ml">John Martin 500ml</option>
+                                <option value="John Martin 1L">John Martin 1L</option>
+                                <option value="Prata Aqua 750ml (26.5g)">Prata Aqua 750ml (26.5g)</option>
+                                <option value="Prata Aqua 750ml (19.5g)">Prata Aqua 750ml (19.5g)</option>
+                                <option value="Prata Aqua 400ml">Prata Aqua 400ml</option>
+                                <option value="Prata Aqua 200ml">Prata Aqua 200ml</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="stockOpeningGroup">
+                            <label>OPENING STOCK <span id="stockOpeningHint"
+                                    style="font-size:10px;color:var(--accent);"></span></label>
+                            <input type="number" id="stockOpening" min="0" placeholder="0" oninput="calcStockClosing()">
+                        </div>
+                        <div class="form-group">
+                            <label>PRODUCTION</label>
+                            <input type="number" id="stockProduction" min="0" placeholder="0"
+                                oninput="calcStockClosing()">
+                        </div>
+                        <div class="form-group">
+                            <label>SALES (Auto from Daily Sales Entry)</label>
+                            <input type="number" id="stockSalesAuto" readonly placeholder="0"
+                                style="color:var(--accent);font-weight:600;">
+                        </div>
+                        <div class="form-group">
+                            <label>CLOSING STOCK (Auto-calculated)</label>
+                            <input type="number" id="stockClosing" readonly placeholder="0"
+                                style="color:var(--green);font-weight:700;">
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="saveStockEntry()">
+                            <i class="fas fa-save"></i> Save Stock Entry
+                        </button>
+                        <button class="btn btn-ghost" onclick="clearStockForm()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stock Records Table -->
+                <div class="card">
+                    <div class="card-title">Stock Movement Log</div>
+                    <div id="stockRecordsContent">
+                        <div class="empty"><i class="fas fa-boxes-stacked"></i>
+                            <p>No stock records yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: COMMON RATE BOARD ═══ -->
+            <div class="page" id="page-rateboard">
+                <div class="page-header">
+                    <div class="page-title">Common Rate Board</div>
+                    <div class="page-sub">Grouped total cases by product + rate combination</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="rateFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="rateTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderRateBoard()"><i class="fas fa-filter"></i>
+                        Filter</button>
+                    <button class="btn btn-ghost" onclick="clearRateBoardFilter()"><i class="fas fa-refresh"></i>
+                        All</button>
+                </div>
+                <div id="rateBoardContent">
+                    <div class="empty"><i class="fas fa-layer-group"></i>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /main -->
+    </div><!-- /app -->
+
+    <!-- EDIT MODAL -->
+    <div class="modal-overlay hidden" id="editModal">
+        <div class="modal">
+            <div class="modal-title">Edit Entry</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>DATE</label>
+                    <input type="date" id="editDate">
+                </div>
+                <div class="form-group">
+                    <label>PRODUCT</label>
+                    <select id="editProduct">
+                        <option value="John Martin 200ml">John Martin 200ml</option>
+                        <option value="John Martin 500ml">John Martin 500ml</option>
+                        <option value="John Martin 1L">John Martin 1L</option>
+                        <option value="Prata Aqua 750ml (26.5g)">Prata Aqua 750ml (26.5g)</option>
+                        <option value="Prata Aqua 750ml (19.5g)">Prata Aqua 750ml (19.5g)</option>
+                        <option value="Prata Aqua 400ml">Prata Aqua 400ml</option>
+                        <option value="Prata Aqua 200ml">Prata Aqua 200ml</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>QUANTITY</label>
+                    <input type="number" id="editQty" oninput="calcEditAmount()">
+                </div>
+                <div class="form-group">
+                    <label>RATE (₹)</label>
+                    <input type="number" id="editRate" oninput="calcEditAmount()">
+                </div>
+                <div class="form-group full">
+                    <label>AMOUNT (₹)</label>
+                    <input type="text" id="editAmount" readonly>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- USER LOGIN MODAL (shared for Admin, Profit, Cost Price, Export) -->
+    <div class="modal-overlay hidden" id="userLoginModal">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-title"><i class="fas fa-lock"></i> <span id="userLoginTitle">Access Required</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px;" id="userLoginDesc">Enter your name and
+                password to continue.</div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>YOUR NAME</label>
+                <input type="text" id="userLoginName" placeholder="e.g. Name" autocomplete="username"
+                    onkeydown="if(event.key==='Enter')document.getElementById('userPassword').focus()">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>PASSWORD</label>
+                <input type="password" id="userPassword" placeholder="Enter password" autocomplete="current-password"
+                    onkeydown="if(event.key==='Enter')verifyUserLogin()">
+            </div>
+            <div id="userLoginError" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeUserLogin()">Cancel</button>
+                <button class="btn btn-primary" id="userLoginBtn" onclick="verifyUserLogin()">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN LOGIN MODAL (kept for topbar Admin button — admin-only features) -->
+    <div class="modal-overlay hidden" id="adminLoginModal">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-title"><i class="fas fa-shield-halved"></i> Admin Access</div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>YOUR NAME</label>
+                <input type="text" id="adminLoginName" placeholder="e.g. Name" autocomplete="username"
+                    onkeydown="if(event.key==='Enter')document.getElementById('adminPassword').focus()">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>PASSWORD</label>
+                <input type="password" id="adminPassword" placeholder="Enter admin password"
+                    autocomplete="current-password" onkeydown="if(event.key==='Enter')verifyAdmin()">
+            </div>
+            <div id="adminLoginError" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeAdminLogin()">Cancel</button>
+                <button class="btn btn-primary" id="adminLoginBtn" onclick="verifyAdmin()">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE PIN MODAL -->
+    <div class="modal-overlay hidden" id="deletePinModal">
+        <div class="modal" style="max-width:340px;">
+            <div class="modal-title" style="color:var(--red);"><i class="fas fa-triangle-exclamation"></i> Confirm
+                Delete</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:16px;" id="deletePinDesc">Enter the delete PIN
+                to confirm.</div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>DELETE PIN</label>
+                <input type="password" id="deletePinInput" placeholder="Enter PIN"
+                    onkeydown="if(event.key==='Enter')verifyDeletePin()">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeDeletePin()">Cancel</button>
+                <button class="btn btn-danger" onclick="verifyDeletePin()"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════
+        // CONFIG
+        // ═══════════════════════════════════════════════════════════
+        // Passwords and DELETE_PIN are NO LONGER stored here.
+        // Authentication is handled by Firebase Auth (see auth.js).
+        // The delete PIN is stored securely in Firestore → appConfig/security.
+
+        const PRODUCTS = [
+            'John Martin 200ml', 'John Martin 500ml', 'John Martin 1L',
+            'Prata Aqua 750ml (26.5g)', 'Prata Aqua 750ml (19.5g)',
+            'Prata Aqua 400ml', 'Prata Aqua 200ml'
+        ];
+
+        // ═══════════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════════
+        let db, fs;
+        let allEntries = [];
+        let costPricesByDate = {};
+        let isAdmin = false;
+        let editingId = null;
+
+        // ═══════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════
+        let _firebaseLoaded = false;
+
+        window.addEventListener('firebase-ready', async () => {
+            _firebaseLoaded = true;
+            db = window._db; fs = window._fs;
+            setDefaultDate();
+            hideSyncBanner();
+            try {
+                await Promise.all([loadEntries(), loadCostPrices()]);
+                renderAll();
+            } catch (e) {
+                console.error('Firebase load error:', e);
+                showSyncBanner('Firebase error: ' + (e.message || 'Unknown error. Check Firestore Security Rules.'));
+            }
+            document.getElementById('loader').classList.add('hidden');
+        });
+
+        // If Firebase hasn't initialized within 12 seconds, show error — do NOT silently fall back
+        setTimeout(() => {
+            if (!_firebaseLoaded) {
+                document.getElementById('loader').classList.add('hidden');
+                showSyncBanner('Cannot connect to Firebase. Check your internet connection or Firestore Security Rules.');
+                // Still load whatever is in localStorage so UI is not blank
+                initDemoMode();
+            }
+        }, 12000);
+
+        function showSyncBanner(msg) {
+            let banner = document.getElementById('syncErrorBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'syncErrorBanner';
+                banner.style.cssText = 'position:fixed;top:60px;left:0;right:0;z-index:9000;background:#3a0a0a;border-bottom:2px solid #ff4d6a;color:#ff8fa3;font-size:13px;font-weight:600;padding:10px 20px;display:flex;align-items:center;gap:12px;';
+                document.body.appendChild(banner);
+            }
+            banner.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:#ff4d6a"></i> <span style="flex:1">' + msg + '</span>' +
+                '<button onclick="retryFirebaseLoad()" style="background:#ff4d6a;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Retry</button>' +
+                '<button onclick="hideSyncBanner()" style="background:none;border:none;color:#ff8fa3;font-size:16px;cursor:pointer;margin-left:4px;">&times;</button>';
+        }
+
+        function hideSyncBanner() {
+            const b = document.getElementById('syncErrorBanner');
+            if (b) b.remove();
+        }
+
+        async function retryFirebaseLoad() {
+            hideSyncBanner();
+            document.getElementById('loader').classList.remove('hidden');
+            if (!window._db) {
+                showSyncBanner('Firebase still not connected. Please check your internet and reload the page.');
+                document.getElementById('loader').classList.add('hidden');
+                return;
+            }
+            db = window._db; fs = window._fs;
+            try {
+                await Promise.all([loadEntries(), loadCostPrices(), loadStockRecords()]);
+                renderAll();
+                renderStockRecords();
+                renderRateBoard();
+                showToast('Data refreshed from Firebase!', 'success');
+            } catch (e) {
+                showSyncBanner('Retry failed: ' + (e.message || 'Check Firestore Security Rules.'));
+            }
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        function initDemoMode() {
+            allEntries = JSON.parse(localStorage.getItem('prata_entries') || '[]');
+            costPricesByDate = JSON.parse(localStorage.getItem('prata_costs_v2') || '{}');
+            setDefaultDate();
+            renderAll();
+        }
+
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const monthStart = today.substring(0, 7) + '-01';
+            // Yesterday
+            const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+            const yesterday = yDate.toISOString().split('T')[0];
+            document.getElementById('entryDate').value = today;
+            ['daily', 'analysis', 'profit'].forEach(p => {
+                const f = document.getElementById(p + 'From');
+                const t = document.getElementById(p + 'To');
+                if (f && t) { f.value = ''; t.value = ''; }
+            });
+            // Admin: default to current month
+            const af = document.getElementById('adminFrom');
+            const at = document.getElementById('adminTo');
+            if (af && !af.value) af.value = monthStart;
+            if (at && !at.value) at.value = today;
+            // Cost price: default to yesterday
+            const cp = document.getElementById('cpDatePicker');
+            if (cp && !cp.value) cp.value = yesterday;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FIREBASE CRUD
+        // ═══════════════════════════════════════════════════════════
+        async function loadEntries() {
+            const q = fs.query(fs.collection(db, 'sales'), fs.orderBy('date', 'desc'));
+            const snap = await fs.getDocs(q);  // throws on permission/network error — caught by caller
+            allEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            console.log('[Firebase] Loaded', allEntries.length, 'sales entries');
+        }
+
+        async function loadCostPrices() {
+            const snap = await fs.getDocs(fs.collection(db, 'costPrices'));  // throws on error
+            costPricesByDate = {};
+            snap.docs.forEach(d => { costPricesByDate[d.id] = d.data(); });
+            console.log('[Firebase] Loaded cost prices for', snap.docs.length, 'dates');
+            renderCostPrices();
+        }
+
+        async function saveEntry() {
+            const date = document.getElementById('entryDate').value;
+            const product = document.getElementById('entryProduct').value;
+            const qty = parseFloat(document.getElementById('entryQty').value);
+            const rate = parseFloat(document.getElementById('entryRate').value);
+            const amount = qty * rate;
+
+            if (!date || !product || !qty || !rate) return showToast('Please fill all fields', 'error');
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+
+            const entry = { date, product, qty, rate, amount, createdAt: new Date().toISOString() };
+
+            try {
+                if (db && fs) {
+                    const docRef = await fs.addDoc(fs.collection(db, 'sales'), entry);
+                    entry.id = docRef.id;
+                } else {
+                    entry.id = Date.now().toString();
+                    localStorage.setItem('prata_entries', JSON.stringify([entry, ...allEntries]));
+                }
+                allEntries.unshift(entry);
+                showToast('Entry saved!', 'success');
+                clearForm();
+                renderAll();
+            } catch (e) {
+                showToast('Error saving entry', 'error');
+            }
+            btn.disabled = false;
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Delete this entry?')) return;
+            try {
+                if (db && fs) await fs.deleteDoc(fs.doc(db, 'sales', id));
+                allEntries = allEntries.filter(e => e.id !== id);
+                if (!db) localStorage.setItem('prata_entries', JSON.stringify(allEntries));
+                showToast('Entry deleted', 'success');
+                renderAll();
+            } catch (e) { showToast('Error deleting', 'error'); }
+        }
+
+        async function saveCostPrices() {
+            const picker = document.getElementById('cpDatePicker');
+            const selectedDate = picker ? picker.value : new Date().toISOString().split('T')[0];
+            if (!selectedDate) return showToast('Please select a date', 'error');
+            const prices = {};
+            PRODUCTS.forEach(p => {
+                const val = parseFloat(document.getElementById('cp_' + p.replace(/[^a-zA-Z0-9]/g, '_'))?.value || 0);
+                prices[p] = isNaN(val) ? 0 : val;
+            });
+            costPricesByDate[selectedDate] = prices;
+            try {
+                if (db && fs) await fs.setDoc(fs.doc(db, 'costPrices', selectedDate), prices);
+                else localStorage.setItem('prata_costs_v2', JSON.stringify(costPricesByDate));
+                showToast('Cost prices saved for ' + formatDate(selectedDate) + '!', 'success');
+                renderProfit();
+                renderAdmin();
+            } catch (e) { showToast('Error saving cost prices', 'error'); }
+        }
+
+        // Returns cost price for a product on a given date.
+        // Uses exact-date match first, then falls back to the most recent prior date's price.
+        function getCostPrice(product, date) {
+            if (costPricesByDate[date] && costPricesByDate[date][product] !== undefined) {
+                return costPricesByDate[date][product];
+            }
+            const prior = Object.keys(costPricesByDate)
+                .filter(d => d <= date)
+                .sort((a, b) => b.localeCompare(a));
+            if (prior.length > 0 && costPricesByDate[prior[0]][product] !== undefined) {
+                return costPricesByDate[prior[0]][product];
+            }
+            return 0;
+        }
+
+        async function saveEdit() {
+            const date = document.getElementById('editDate').value;
+            const product = document.getElementById('editProduct').value;
+            const qty = parseFloat(document.getElementById('editQty').value);
+            const rate = parseFloat(document.getElementById('editRate').value);
+            const amount = qty * rate;
+            if (!date || !product || !qty || !rate) return showToast('Fill all fields', 'error');
+
+            const updates = { date, product, qty, rate, amount, edited: true, editedAt: new Date().toISOString() };
+            try {
+                if (db && fs) await fs.updateDoc(fs.doc(db, 'sales', editingId), updates);
+                allEntries = allEntries.map(e => e.id === editingId ? { ...e, ...updates } : e);
+                if (!db) localStorage.setItem('prata_entries', JSON.stringify(allEntries));
+                showToast('Entry updated!', 'success');
+                closeEditModal();
+                renderAll();
+            } catch (e) { showToast('Error updating', 'error'); }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // CALCULATIONS
+        // ═══════════════════════════════════════════════════════════
+        function calcAmount() {
+            const q = parseFloat(document.getElementById('entryQty').value) || 0;
+            const r = parseFloat(document.getElementById('entryRate').value) || 0;
+            document.getElementById('entryAmount').value = q && r ? '₹ ' + fmt(q * r) : '';
+        }
+
+        function calcEditAmount() {
+            const q = parseFloat(document.getElementById('editQty').value) || 0;
+            const r = parseFloat(document.getElementById('editRate').value) || 0;
+            document.getElementById('editAmount').value = q && r ? '₹ ' + fmt(q * r) : '';
+        }
+
+        function filterEntries(from, to) {
+            return allEntries.filter(e => {
+                if (from && e.date < from) return false;
+                if (to && e.date > to) return false;
+                return true;
+            });
+        }
+
+        function aggregateByDate(entries) {
+            const map = {};
+            entries.forEach(e => {
+                if (!map[e.date]) map[e.date] = {};
+                if (!map[e.date][e.product]) map[e.date][e.product] = { qty: 0, amount: 0 };
+                map[e.date][e.product].qty += e.qty;
+                map[e.date][e.product].amount += e.amount;
+            });
+            return map;
+        }
+
+        function aggregateByProduct(entries) {
+            const map = {};
+            entries.forEach(e => {
+                if (!map[e.product]) map[e.product] = { qty: 0, amount: 0 };
+                map[e.product].qty += e.qty;
+                map[e.product].amount += e.amount;
+            });
+            return map;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // RENDER ALL
+        // ═══════════════════════════════════════════════════════════
+        function renderAll() {
+            renderTodayStats();
+            renderTodayEntries();
+            renderDailySales();
+            renderAnalysis();
+            renderProfit();
+            renderAdmin();
+            renderCostPrices();
+        }
+
+        function renderTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = allEntries.filter(e => e.date === today);
+            const cases = todayData.reduce((s, e) => s + e.qty, 0);
+            const sales = todayData.reduce((s, e) => s + e.amount, 0);
+            document.getElementById('statEntries').textContent = todayData.length;
+            document.getElementById('statCases').textContent = cases;
+            document.getElementById('statSales').textContent = '₹' + fmt(sales);
+        }
+
+        function renderTodayEntries() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = allEntries.filter(e => e.date === today);
+            const tbody = document.getElementById('todayEntriesBody');
+            if (!todayData.length) {
+                tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><p>No entries today</p></div></td></tr>';
+                return;
+            }
+            tbody.innerHTML = todayData.map(e => `
+    <tr>
+      <td>${shortProduct(e.product)}${e.edited ? ' <span class="tag tag-amber" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Edited</span>' : ''}</td>
+      <td class="num"><span class="tag tag-blue">${e.qty}</span></td>
+      <td class="num">₹${fmt(e.rate)}</td>
+      <td class="num" style="color:var(--green);font-weight:600">₹${fmt(e.amount)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEdit('${e.id}')"><i class="fas fa-pen"></i></button></td>
+    </tr>
+  `).join('');
+        }
+
+        function renderDailySales() {
+            const from = document.getElementById('dailyFrom').value;
+            const to = document.getElementById('dailyTo').value;
+            const entries = filterEntries(from, to);
+            const byDate = aggregateByDate(entries);
+            const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+            const cont = document.getElementById('dailySalesContent');
+
+            if (!dates.length) {
+                cont.innerHTML = '<div class="empty"><i class="fas fa-calendar-xmark"></i><p>No data found</p></div>';
+                return;
+            }
+
+            cont.innerHTML = dates.map(date => {
+                const products = byDate[date];
+                const totalCases = Object.values(products).reduce((s, p) => s + p.qty, 0);
+                const totalAmt = Object.values(products).reduce((s, p) => s + p.amount, 0);
+                const rows = Object.keys(products).map(prod => `
+      <tr>
+        <td>${prod}</td>
+        <td class="num"><span class="tag tag-blue">${products[prod].qty}</span></td>
+        <td class="num" style="color:var(--green);font-weight:600">₹${fmt(products[prod].amount)}</td>
+      </tr>
+    `).join('');
+                return `
+      <div class="date-group-header">
+        <span><i class="fas fa-calendar-day"></i> ${formatDate(date)}</span>
+        <span style="color:var(--text2);font-size:12px">${totalCases} cases · ₹${fmt(totalAmt)}</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:8px;">
+        <table>
+          <thead><tr><th>Product</th><th class="num">Cases</th><th class="num">Amount</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+            }).join('');
+        }
+
+        function renderAnalysis() {
+            const from = document.getElementById('analysisFrom').value;
+            const to = document.getElementById('analysisTo').value;
+            const entries = filterEntries(from, to);
+            const byProduct = aggregateByProduct(entries);
+            const tbody = document.getElementById('analysisBody');
+
+            if (!Object.keys(byProduct).length) {
+                tbody.innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fas fa-chart-bar"></i><p>No data</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = PRODUCTS.filter(p => byProduct[p]).map(p => {
+                const d = byProduct[p];
+                const avg = d.qty ? d.amount / d.qty : 0;
+                return `<tr>
+      <td>${p}</td>
+      <td class="num">${d.qty}</td>
+      <td class="num">₹${fmt(d.amount)}</td>
+      <td class="num" style="color:var(--accent);font-weight:700">₹${fmt(avg)}</td>
+    </tr>`;
+            }).join('');
+        }
+
+        function renderProfit() {
+            const from = document.getElementById('profitFrom').value;
+            const to = document.getElementById('profitTo').value;
+            const entries = filterEntries(from, to);
+            const byDate = aggregateByDate(entries);
+            const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+            const cont = document.getElementById('profitContent');
+
+            // Get avg price per product overall
+            const globalAvg = aggregateByProduct(entries);
+            Object.keys(globalAvg).forEach(p => {
+                globalAvg[p].avg = globalAvg[p].qty ? globalAvg[p].amount / globalAvg[p].qty : 0;
+            });
+
+            if (!dates.length) {
+                cont.innerHTML = '<div class="empty"><i class="fas fa-indian-rupee-sign"></i><p>No data found</p></div>';
+                return;
+            }
+
+            let grandTotal = 0;
+            const html = dates.map(date => {
+                const products = byDate[date];
+                let dayProfit = 0;
+                const rows = Object.keys(products).map(prod => {
+                    const cp = getCostPrice(prod, date);
+                    const avg = products[prod].qty ? products[prod].amount / products[prod].qty : 0;
+                    const profitPerCase = avg - cp;
+                    const totalProfit = profitPerCase * products[prod].qty;
+                    dayProfit += totalProfit;
+                    const profitColor = totalProfit >= 0 ? 'var(--green)' : 'var(--red)';
+                    return `<tr>
+        <td>${prod}</td>
+        <td class="num">${products[prod].qty}</td>
+        <td class="num">₹${fmt(avg)}</td>
+        <td class="num">₹${fmt(cp)}</td>
+        <td class="num" style="color:${profitColor};font-weight:600">₹${fmt(profitPerCase)}</td>
+        <td class="num" style="color:${profitColor};font-weight:700">₹${fmt(totalProfit)}</td>
+      </tr>`;
+                }).join('');
+                grandTotal += dayProfit;
+                const dayColor = dayProfit >= 0 ? 'var(--green)' : 'var(--red)';
+                return `
+      <div class="date-group-header">
+        <span><i class="fas fa-calendar-day"></i> ${formatDate(date)}</span>
+        <span style="color:${dayColor};font-weight:700">Day Profit: ₹${fmt(dayProfit)}</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="num">Cases</th>
+              <th class="num">Avg Sell</th>
+              <th class="num">Cost</th>
+              <th class="num">Profit/Case</th>
+              <th class="num">Total Profit</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+            }).join('');
+
+            const grandColor = grandTotal >= 0 ? 'var(--green)' : 'var(--red)';
+            cont.innerHTML = html + `
+    <div class="profit-total">
+      <div class="label"><i class="fas fa-trophy"></i> TOTAL PROFIT (All Filtered)</div>
+      <div class="val" style="color:${grandColor}">₹${fmt(grandTotal)}</div>
+    </div>
+  `;
+        }
+
+        function getAdminFilteredEntries() {
+            const today = new Date().toISOString().split('T')[0];
+            const y = today.substring(0, 7); // YYYY-MM
+            const fromEl = document.getElementById('adminFrom');
+            const toEl = document.getElementById('adminTo');
+            // Default: current month if no filter set
+            const from = fromEl?.value || (y + '-01');
+            const to = toEl?.value || today;
+            return allEntries.filter(e => e.date >= from && e.date <= to);
+        }
+
+        function clearAdminFilter() {
+            document.getElementById('adminFrom').value = '';
+            document.getElementById('adminTo').value = '';
+            renderAdmin();
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // DELETE WITH PIN — per-date row delete
+        // ═══════════════════════════════════════════════════════════
+        let _pendingDeleteDate = null;
+
+        function promptDeleteDate(date) {
+            _pendingDeleteDate = date;
+            const count = allEntries.filter(e => e.date === date).length;
+            document.getElementById('deletePinDesc').innerHTML =
+                `You are about to delete <strong>${count} ${count === 1 ? 'entry' : 'entries'}</strong> for <strong>${formatDate(date)}</strong>.<br>Enter the delete PIN to confirm.`;
+            document.getElementById('deletePinInput').value = '';
+            document.getElementById('deletePinModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('deletePinInput').focus(), 100);
+        }
+
+        function verifyDeletePin() {
+            const pin = document.getElementById('deletePinInput').value;
+            if (!window._auth_api || !window._auth_api.verifyDeletePin(pin)) {
+                showToast('Wrong PIN', 'error');
+                document.getElementById('deletePinInput').value = '';
+                document.getElementById('deletePinInput').focus();
+                return;
+            }
+            document.getElementById('deletePinModal').classList.add('hidden');
+            document.getElementById('deletePinInput').value = '';
+            if (_pendingDeleteDate) {
+                executeDeleteDate(_pendingDeleteDate);
+                _pendingDeleteDate = null;
+            }
+        }
+
+        function closeDeletePin() {
+            document.getElementById('deletePinModal').classList.add('hidden');
+            document.getElementById('deletePinInput').value = '';
+            _pendingDeleteDate = null;
+        }
+
+        async function executeDeleteDate(date) {
+            const toDelete = allEntries.filter(e => e.date === date);
+            if (!toDelete.length) return showToast('No entries found for that date', 'error');
+            try {
+                for (const e of toDelete) {
+                    if (db && fs) await fs.deleteDoc(fs.doc(db, 'sales', e.id));
+                }
+                allEntries = allEntries.filter(e => e.date !== date);
+                if (!db) localStorage.setItem('prata_entries', JSON.stringify(allEntries));
+                showToast(`Deleted ${toDelete.length} entries for ${formatDate(date)}`, 'success');
+                renderAll();
+            } catch (err) { showToast('Error deleting entries', 'error'); }
+        }
+
+        function renderAdmin() {
+            // Set default date range to current month if not set
+            const today = new Date().toISOString().split('T')[0];
+            const monthStart = today.substring(0, 7) + '-01';
+            const fromEl = document.getElementById('adminFrom');
+            const toEl = document.getElementById('adminTo');
+            if (fromEl && !fromEl.value) fromEl.value = monthStart;
+            if (toEl && !toEl.value) toEl.value = today;
+
+            const filtered = getAdminFilteredEntries();
+
+            // Stats based on filtered data
+            const totalCases = filtered.reduce((s, e) => s + e.qty, 0);
+            const totalRev = filtered.reduce((s, e) => s + e.amount, 0);
+            let totalProfit = 0;
+            filtered.forEach(e => {
+                const cp = getCostPrice(e.product, e.date);
+                const avg = e.qty ? e.amount / e.qty : 0;
+                totalProfit += (avg - cp) * e.qty;
+            });
+            document.getElementById('adminTotal').textContent = filtered.length;
+            document.getElementById('adminCases').textContent = totalCases;
+            document.getElementById('adminRevenue').textContent = '₹' + fmt(totalRev);
+            document.getElementById('adminProfit').textContent = '₹' + fmt(totalProfit);
+
+            // Filter label
+            const label = document.getElementById('adminFilterLabel');
+            const from = fromEl?.value, to = toEl?.value;
+            if (label) label.textContent = (from && to) ? `(${formatDate(from)} – ${formatDate(to)})` : '';
+
+            const thead = document.getElementById('adminHead');
+            const tbody = document.getElementById('adminBody');
+            const colspan = PRODUCTS.length;
+
+            if (!filtered.length) {
+                thead.innerHTML = '<tr><th>No records</th></tr>';
+                tbody.innerHTML = '<tr><td><div class="empty"><i class="fas fa-database"></i><p>No records in selected range</p></div></td></tr>';
+                return;
+            }
+
+            // Build Header
+            const prodHeaders = PRODUCTS.map(p => `<th style="font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;">${p}</th>`).join('');
+            thead.innerHTML = `
+        <tr>
+          <th rowspan="2" style="vertical-align:middle; min-width:120px;">Date</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">CASES SOLD</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">SELLING AMT TOTAL CASE (₹)</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">AVERAGE SELLING AMOUNT PER CASE (₹)</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">COST PRICE (₹)</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">PROFIT / CASE (₹)</th>
+          <th colspan="${colspan}" style="text-align:center; border-left:2px solid var(--accent)">TOTAL PROFIT (₹)</th>
+          <th rowspan="2" style="vertical-align:middle; border-left:2px solid var(--accent); text-align:right;">Day Total Profit (₹)</th>
+          <th rowspan="2" style="vertical-align:middle; border-left:2px solid var(--accent); text-align:center; min-width:60px;">Del</th>
+        </tr>
+        <tr>
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+          ${prodHeaders.replace('<th', '<th style="border-left:2px solid var(--accent); font-size:10px; min-width:80px; white-space:normal; line-height:1.2; word-break:break-word;"')}
+        </tr>
+      `;
+
+            // Group filtered entries by date
+            const byDate = {};
+            filtered.forEach(e => {
+                if (!byDate[e.date]) byDate[e.date] = [];
+                byDate[e.date].push(e);
+            });
+            const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+            let html = '';
+            dates.forEach(date => {
+                const dayEntries = byDate[date];
+                const byProduct = {};
+                dayEntries.forEach(e => {
+                    if (!byProduct[e.product]) byProduct[e.product] = { qty: 0, amount: 0, entries: [] };
+                    byProduct[e.product].qty += e.qty;
+                    byProduct[e.product].amount += e.amount;
+                    byProduct[e.product].entries.push(e);
+                });
+
+                let dayProfit = 0;
+                Object.keys(byProduct).forEach(prod => {
+                    const cp = getCostPrice(prod, date);
+                    const avg = byProduct[prod].qty ? byProduct[prod].amount / byProduct[prod].qty : 0;
+                    dayProfit += (avg - cp) * byProduct[prod].qty;
+                });
+                const dayColor = dayProfit >= 0 ? 'var(--green)' : 'var(--red)';
+
+                const tdCases = PRODUCTS.map((p, i) => {
+                    let v = byProduct[p]?.qty ? `<span class="tag tag-blue">${byProduct[p].qty}</span>` : '-';
+                    return `<td ${i === 0 ? 'style="border-left:2px solid var(--accent);"' : ''}>${v}</td>`;
+                }).join('');
+
+                const tdAmt = PRODUCTS.map((p, i) => {
+                    let v = byProduct[p]?.amount ? `₹${fmt(byProduct[p].amount)}` : '-';
+                    return `<td style="color:var(--text);font-weight:600; ${i === 0 ? 'border-left:2px solid var(--accent);' : ''}">${v}</td>`;
+                }).join('');
+
+                const tdAvg = PRODUCTS.map((p, i) => {
+                    let v = '-';
+                    if (byProduct[p]?.qty) v = `₹${fmt(byProduct[p].amount / byProduct[p].qty)}`;
+                    return `<td style="color:var(--accent);font-weight:600; ${i === 0 ? 'border-left:2px solid var(--accent);' : ''}">${v}</td>`;
+                }).join('');
+
+                const tdCost = PRODUCTS.map((p, i) => {
+                    let cp = getCostPrice(p, date);
+                    return `<td style="${i === 0 ? 'border-left:2px solid var(--accent);' : ''}">₹${fmt(cp)}</td>`;
+                }).join('');
+
+                const tdProfitCase = PRODUCTS.map((p, i) => {
+                    let v = '-'; let color = 'var(--text2)';
+                    if (byProduct[p]?.qty) {
+                        let avg = byProduct[p].amount / byProduct[p].qty;
+                        let val = avg - getCostPrice(p, date);
+                        color = val >= 0 ? 'var(--green)' : 'var(--red)';
+                        v = `₹${fmt(val)}`;
+                    }
+                    return `<td style="color:${color};font-weight:600; ${i === 0 ? 'border-left:2px solid var(--accent);' : ''}">${v}</td>`;
+                }).join('');
+
+                const tdTotalProfit = PRODUCTS.map((p, i) => {
+                    let v = '-'; let color = 'var(--text2)';
+                    if (byProduct[p]?.qty) {
+                        let avg = byProduct[p].amount / byProduct[p].qty;
+                        let val = (avg - getCostPrice(p, date)) * byProduct[p].qty;
+                        color = val >= 0 ? 'var(--green)' : 'var(--red)';
+                        v = `₹${fmt(val)}`;
+                    }
+                    return `<td style="color:${color};font-weight:700; ${i === 0 ? 'border-left:2px solid var(--accent);' : ''}">${v}</td>`;
+                }).join('');
+
+                html += `<tr>
+          <td style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;"><i class="fas fa-calendar-day"></i> ${formatDate(date)}</td>
+          ${tdCases}${tdAmt}${tdAvg}${tdCost}${tdProfitCase}${tdTotalProfit}
+          <td style="font-weight:700; color:${dayColor}; border-left:2px solid var(--accent); text-align:right;">₹${fmt(dayProfit)}</td>
+          <td style="border-left:2px solid var(--accent); text-align:center; padding:6px;">
+            <button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:11px;" onclick="promptDeleteDate('${date}')" title="Delete all entries for ${formatDate(date)}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function renderCostPrices() {
+            const today = new Date().toISOString().split('T')[0];
+            // Yesterday
+            const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+            const yesterday = yDate.toISOString().split('T')[0];
+            const picker = document.getElementById('cpDatePicker');
+            // Default to yesterday if picker not yet set
+            if (picker && !picker.value) picker.value = yesterday;
+            const selectedDate = (picker && picker.value) ? picker.value : yesterday;
+            const badge = document.getElementById('cpDateBadge');
+            if (badge) badge.textContent = formatDate(selectedDate);
+
+            // If this date has saved prices, use them; otherwise fall back to most recent prior date's prices
+            let datePrices = {};
+            if (costPricesByDate[selectedDate]) {
+                datePrices = costPricesByDate[selectedDate];
+            } else {
+                // Find the most recent date with saved prices on or before selectedDate
+                const prior = Object.keys(costPricesByDate)
+                    .filter(d => d <= selectedDate)
+                    .sort((a, b) => b.localeCompare(a));
+                if (prior.length > 0) datePrices = costPricesByDate[prior[0]];
+            }
+
+            const cont = document.getElementById('costPriceList');
+            cont.innerHTML = PRODUCTS.map(p => {
+                const id = 'cp_' + p.replace(/[^a-zA-Z0-9]/g, '_');
+                return `
+      <div class="cp-row">
+        <div class="cp-name">${p}</div>
+        <input class="cp-input" type="number" id="${id}" min="0" step="0.01"
+          placeholder="₹ 0.00" value="${datePrices[p] !== undefined ? datePrices[p] : ''}">
+      </div>
+    `;
+            }).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // EDIT MODAL
+        // ═══════════════════════════════════════════════════════════
+        function openEdit(id) {
+            const e = allEntries.find(x => x.id === id);
+            if (!e) return;
+            editingId = id;
+            document.getElementById('editDate').value = e.date;
+            document.getElementById('editProduct').value = e.product;
+            document.getElementById('editQty').value = e.qty;
+            document.getElementById('editRate').value = e.rate;
+            document.getElementById('editAmount').value = '₹ ' + fmt(e.amount);
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editingId = null; }
+
+        // ═══════════════════════════════════════════════════════════
+        // USER AUTH — multi-password gate for protected sections
+        // ═══════════════════════════════════════════════════════════
+        let _pendingAccessTarget = null; // 'profit' | 'costprice' | 'export' | 'admin'
+
+        function requestAccess(target) {
+            _pendingAccessTarget = target;
+            const titles = {
+                profit: 'Profit Report',
+                costprice: 'Cost Price Management',
+                export: 'Export Excel',
+                admin: 'Admin Panel',
+                stock: 'Stock Records'
+            };
+            document.getElementById('userLoginTitle').textContent = titles[target] || 'Access Required';
+            document.getElementById('userLoginDesc').textContent = 'Enter your password to access this section.';
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userLoginModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('userPassword').focus(), 100);
+        }
+
+        async function verifyUserLogin() {
+            const name = document.getElementById('userLoginName').value.trim();
+            const pwd = document.getElementById('userPassword').value;
+            const errEl = document.getElementById('userLoginError');
+            const btn = document.getElementById('userLoginBtn');
+
+            if (!name || !pwd) {
+                errEl.textContent = 'Please enter your name and password.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Checking…';
+            errEl.style.display = 'none';
+
+            const result = await window._auth_api.signInByName(name, pwd);
+
+            btn.disabled = false;
+            btn.textContent = 'Unlock';
+
+            if (result.ok) {
+                document.getElementById('userLoginModal').classList.add('hidden');
+                document.getElementById('userLoginName').value = '';
+                document.getElementById('userPassword').value = '';
+                errEl.style.display = 'none';
+
+                if (_pendingAccessTarget === 'export') {
+                    exportExcel();
+                } else if (_pendingAccessTarget === 'stock') {
+                    showPage('stock');
+                } else if (_pendingAccessTarget) {
+                    showPage(_pendingAccessTarget);
+                }
+                _pendingAccessTarget = null;
+                showToast('Access granted', 'success');
+            } else {
+                errEl.textContent = result.error || 'Wrong name or password.';
+                errEl.style.display = 'block';
+                document.getElementById('userPassword').value = '';
+                document.getElementById('userPassword').focus();
+            }
+        }
+
+        function closeUserLogin() {
+            document.getElementById('userLoginModal').classList.add('hidden');
+            document.getElementById('userPassword').value = '';
+            _pendingAccessTarget = null;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ADMIN AUTH (topbar Admin button — unlocks Admin Panel nav)
+        // ═══════════════════════════════════════════════════════════
+        function toggleAdmin() {
+            if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('adminNavBtn').style.display = 'none';
+                document.getElementById('adminBtnText').textContent = 'Admin';
+                showPage('entry');
+                showToast('Logged out', 'success');
+            } else {
+                document.getElementById('adminLoginModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('adminPassword').focus(), 100);
+            }
+        }
+
+        async function verifyAdmin() {
+            const name = document.getElementById('adminLoginName').value.trim();
+            const pwd = document.getElementById('adminPassword').value;
+            const errEl = document.getElementById('adminLoginError');
+            const btn = document.getElementById('adminLoginBtn');
+
+            if (!name || !pwd) {
+                errEl.textContent = 'Please enter your name and password.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Checking…';
+            errEl.style.display = 'none';
+
+            const result = await window._auth_api.signInByName(name, pwd);
+
+            btn.disabled = false;
+            btn.textContent = 'Login';
+
+            if (result.ok && result.isAdmin) {
+                isAdmin = true;
+                document.getElementById('adminNavBtn').style.display = 'flex';
+                document.getElementById('adminBtnText').textContent = 'Logout';
+                document.getElementById('adminLoginModal').classList.add('hidden');
+                document.getElementById('adminLoginName').value = '';
+                document.getElementById('adminPassword').value = '';
+                errEl.style.display = 'none';
+                showPage('admin');
+                showToast('Admin access granted', 'success');
+            } else if (result.ok && !result.isAdmin) {
+                // Signed in but not an admin role
+                await window._auth_api.logOut();
+                errEl.textContent = 'This account does not have admin privileges.';
+                errEl.style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+            } else {
+                errEl.textContent = result.error || 'Wrong name or password.';
+                errEl.style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
+        function closeAdminLogin() {
+            document.getElementById('adminLoginModal').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════════
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelector('.nav-btn[data-page="' + page + '"]')?.classList.add('active');
+            closeSidebar();
+            if (page === 'profit') renderProfit();
+            if (page === 'daily') renderDailySales();
+            if (page === 'analysis') renderAnalysis();
+            if (page === 'admin') renderAdmin();
+            if (page === 'stock') { setStockDefaultDate(); renderStockRecords(); }
+            if (page === 'rateboard') renderRateBoard();
+        }
+
+        function clearForm() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('entryDate').value = today;
+            document.getElementById('entryProduct').value = '';
+            document.getElementById('entryQty').value = '';
+            document.getElementById('entryRate').value = '';
+            document.getElementById('entryAmount').value = '';
+        }
+
+        function clearDateFilter(page) {
+            document.getElementById(page + 'From').value = '';
+            document.getElementById(page + 'To').value = '';
+            if (page === 'daily') renderDailySales();
+            if (page === 'analysis') renderAnalysis();
+            if (page === 'profit') renderProfit();
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // EXPORT ADMIN EXCEL (mirrors All Sales Records pivot table)
+        // ═══════════════════════════════════════════════════════════
+        function exportAdminExcel() {
+            const filtered = getAdminFilteredEntries();
+            if (!filtered.length) return showToast('No data to export for selected range', 'error');
+
+            const wb = XLSX.utils.book_new();
+            const pivotData = [];
+
+            const r1 = ['Date'];
+            r1.push('CASES SOLD'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('SELLING AMT TOTAL CASE (₹)'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('AVERAGE SELLING AMOUNT PER CASE (₹)'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('COST PRICE (₹)'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('PROFIT / CASE (₹)'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('TOTAL PROFIT (₹)'); for (let i = 1; i < PRODUCTS.length; i++) r1.push('');
+            r1.push('Day Total Profit (₹)');
+            pivotData.push(r1);
+
+            const r2 = [''];
+            for (let i = 0; i < 6; i++) PRODUCTS.forEach(p => r2.push(p));
+            r2.push('');
+            pivotData.push(r2);
+
+            const byDateMap = {};
+            filtered.forEach(e => {
+                if (!byDateMap[e.date]) byDateMap[e.date] = [];
+                byDateMap[e.date].push(e);
+            });
+            const dates = Object.keys(byDateMap).sort((a, b) => b.localeCompare(a));
+
+            dates.forEach(date => {
+                const byProduct = {};
+                byDateMap[date].forEach(e => {
+                    if (!byProduct[e.product]) byProduct[e.product] = { qty: 0, amount: 0 };
+                    byProduct[e.product].qty += e.qty;
+                    byProduct[e.product].amount += e.amount;
+                });
+
+                let dayProfit = 0;
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const cp = getCostPrice(p, date);
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        dayProfit += (avg - cp) * byProduct[p].qty;
+                    }
+                });
+
+                const row = [date];
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty || '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.amount ? parseFloat(byProduct[p].amount.toFixed(2)) : '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty ? parseFloat((byProduct[p].amount / byProduct[p].qty).toFixed(2)) : '-'));
+                PRODUCTS.forEach(p => row.push(parseFloat(getCostPrice(p, date).toFixed(2))));
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        row.push(parseFloat((avg - getCostPrice(p, date)).toFixed(2)));
+                    } else row.push('-');
+                });
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        row.push(parseFloat(((avg - getCostPrice(p, date)) * byProduct[p].qty).toFixed(2)));
+                    } else row.push('-');
+                });
+                row.push(parseFloat(dayProfit.toFixed(2)));
+                pivotData.push(row);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(pivotData);
+            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }];
+            for (let block = 0; block < 6; block++) {
+                const startCol = 1 + block * PRODUCTS.length;
+                ws['!merges'].push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + PRODUCTS.length - 1 } });
+            }
+            const lastCol = 1 + 6 * PRODUCTS.length;
+            ws['!merges'].push({ s: { r: 0, c: lastCol }, e: { r: 1, c: lastCol } });
+
+            XLSX.utils.book_append_sheet(wb, ws, 'All Sales Records');
+
+            const from = document.getElementById('adminFrom')?.value || '';
+            const to = document.getElementById('adminTo')?.value || '';
+            const rangeSuffix = (from && to) ? `_${from}_to_${to}` : `_${new Date().toISOString().split('T')[0]}`;
+            XLSX.writeFile(wb, `PrataAqua_AdminSales${rangeSuffix}.xlsx`);
+            showToast('Excel exported!', 'success');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // EXPORT EXCEL
+        // ═══════════════════════════════════════════════════════════
+        function exportExcel() {
+            if (!allEntries.length) return showToast('No data to export', 'error');
+
+            const wb = XLSX.utils.book_new();
+            const byDate = aggregateByDate(allEntries);
+
+            // Sheet 1: Pivot All Sales (matches Admin table)
+            const pivotData = [];
+
+            const r1 = ['Date'];
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'CASES SOLD' : '');
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'SELLING AMT TOTAL CASE (₹)' : '');
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'AVERAGE SELLING AMOUNT PER CASE (₹)' : '');
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'COST PRICE (₹)' : '');
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'PROFIT / CASE (₹)' : '');
+            for (let i = 0; i < PRODUCTS.length; i++) r1.push(i === 0 ? 'TOTAL PROFIT (₹)' : '');
+            r1.push('Day Total Profit (₹)');
+            pivotData.push(r1);
+
+            const r2 = [''];
+            for (let i = 0; i < 6; i++) {
+                PRODUCTS.forEach(p => r2.push(p));
+            }
+            r2.push('');
+            pivotData.push(r2);
+
+            const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+            dates.forEach(date => {
+                const row = [date];
+                const byProduct = byDate[date];
+                let dayProfit = 0;
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const cp = getCostPrice(p, date);
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        dayProfit += (avg - cp) * byProduct[p].qty;
+                    }
+                });
+
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty || '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.amount ? byProduct[p].amount.toFixed(2) : '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty ? (byProduct[p].amount / byProduct[p].qty).toFixed(2) : '-'));
+                PRODUCTS.forEach(p => row.push(getCostPrice(p, date).toFixed(2)));
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        row.push((avg - getCostPrice(p, date)).toFixed(2));
+                    } else row.push('-');
+                });
+                PRODUCTS.forEach(p => {
+                    if (byProduct[p]?.qty) {
+                        const avg = byProduct[p].amount / byProduct[p].qty;
+                        row.push(((avg - getCostPrice(p, date)) * byProduct[p].qty).toFixed(2));
+                    } else row.push('-');
+                });
+                row.push(dayProfit.toFixed(2));
+                pivotData.push(row);
+            });
+
+            const ws1 = XLSX.utils.aoa_to_sheet(pivotData);
+
+            // Add merges to headers exactly like the HTML table
+            ws1['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // Date
+            ];
+            for (let block = 0; block < 6; block++) {
+                const startCol = 1 + block * PRODUCTS.length;
+                ws1['!merges'].push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + PRODUCTS.length - 1 } });
+            }
+            ws1['!merges'].push({ s: { r: 0, c: 1 + 6 * PRODUCTS.length }, e: { r: 1, c: 1 + 6 * PRODUCTS.length } }); // Day Total Profit
+            XLSX.utils.book_append_sheet(wb, ws1, 'All Sales Pivot');
+
+            // Sheet 2: Raw Line-by-Line (Just in case they still need pure raw data)
+            const entriesData = [
+                ['Date', 'Product', 'Cases Sold', 'Rate (₹)', 'Amount (₹)'],
+                ...allEntries.sort((a, b) => b.date.localeCompare(a.date)).map(e =>
+                    [e.date, e.product, e.qty, e.rate, e.amount]
+                )
+            ];
+            const wsRaw = XLSX.utils.aoa_to_sheet(entriesData);
+            XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw Data');
+
+            const dString = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `PrataAqua_Report_${dString}.xlsx`);
+            showToast('Excel exported!', 'success');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // SIDEBAR (MOBILE)
+        // ═══════════════════════════════════════════════════════════
+        document.getElementById('hamburgerBtn').onclick = () => {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        };
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // UTILS
+        // ═══════════════════════════════════════════════════════════
+        function fmt(n) { return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function formatDate(d) {
+            const [y, m, day] = d.split('-');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${day} ${months[parseInt(m) - 1]} ${y}`;
+        }
+        function shortProduct(p) { return p.length > 22 ? p.substring(0, 22) + '…' : p; }
+
+        let toastTimer;
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.className = 'toast ' + type;
+            void t.offsetWidth;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE 1 — STOCK RECORD MANAGEMENT
+        // ═══════════════════════════════════════════════════════════
+
+        // In-memory store: { [product]: { [date]: { opening, production, sales, closing } } }
+        let stockRecords = {};   // loaded from Firebase collection 'stockRecords'
+
+        // ── Load stock from Firebase ──────────────────────────────
+        async function loadStockRecords() {
+            if (!db || !fs) { stockRecords = {}; return; }
+            try {
+                const snap = await fs.getDocs(fs.collection(db, 'stockRecords'));
+                stockRecords = {};
+                snap.docs.forEach(d => {
+                    // Each doc id = "PRODUCT|||DATE"
+                    const [product, date] = d.id.split('|||');
+                    if (!stockRecords[product]) stockRecords[product] = {};
+                    stockRecords[product][date] = d.data();
+                });
+                console.log('[Firebase] Loaded stock records:', snap.docs.length, 'docs');
+            } catch (e) {
+                console.warn('[Firebase] Stock load error:', e.message);
+                showSyncBanner('Stock data load failed: ' + e.message);
+                stockRecords = {};
+            }
+        }
+
+        async function saveStockRecord(product, date, data) {
+            const docId = product + '|||' + date;
+            try {
+                if (db && fs) await fs.setDoc(fs.doc(db, 'stockRecords', docId), data);
+                else {
+                    if (!stockRecords[product]) stockRecords[product] = {};
+                    stockRecords[product][date] = data;
+                    localStorage.setItem('prata_stock', JSON.stringify(stockRecords));
+                }
+            } catch (e) { showToast('Error saving stock', 'error'); }
+        }
+
+        // ── Helper: sales for a product on a date from allEntries ──
+        function getSalesForProduct(product, date) {
+            return allEntries
+                .filter(e => e.product === product && e.date === date)
+                .reduce((s, e) => s + e.qty, 0);
+        }
+
+        // ── Helper: get the most recent stock record for a product before a date ──
+        function getPrevStockRecord(product, date) {
+            const dates = Object.keys(stockRecords[product] || {})
+                .filter(d => d < date)
+                .sort((a, b) => b.localeCompare(a));
+            return dates.length ? stockRecords[product][dates[0]] : null;
+        }
+
+        function setStockDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const el = document.getElementById('stockDate');
+            if (el && !el.value) el.value = today;
+        }
+
+        // ── When product or date changes, auto-fill Opening and Sales ──
+        function onStockProductChange() { refreshStockFormFields(); }
+
+        document.addEventListener('change', function (e) {
+            if (e.target.id === 'stockDate' || e.target.id === 'stockProduct') {
+                refreshStockFormFields();
+            }
+        });
+
+        function refreshStockFormFields() {
+            const date = document.getElementById('stockDate').value;
+            const product = document.getElementById('stockProduct').value;
+            if (!date || !product) return;
+
+            // Auto-fill sales from allEntries
+            const sales = getSalesForProduct(product, date);
+            document.getElementById('stockSalesAuto').value = sales;
+
+            // Check if this product+date already has a record (edit mode)
+            const existing = stockRecords[product]?.[date];
+            if (existing) {
+                document.getElementById('stockOpening').value = existing.opening;
+                document.getElementById('stockProduction').value = existing.production;
+                document.getElementById('stockOpeningHint').textContent = '(existing record)';
+                document.getElementById('stockOpening').readOnly = true;
+                document.getElementById('stockOpening').style.color = 'var(--text2)';
+            } else {
+                // Check if there's a previous record → auto-carry opening
+                const prev = getPrevStockRecord(product, date);
+                if (prev !== null) {
+                    document.getElementById('stockOpening').value = prev.closing;
+                    document.getElementById('stockOpening').readOnly = true;
+                    document.getElementById('stockOpening').style.color = 'var(--accent)';
+                    document.getElementById('stockOpeningHint').textContent = '(auto from prev. closing)';
+                } else {
+                    document.getElementById('stockOpening').value = '';
+                    document.getElementById('stockOpening').readOnly = false;
+                    document.getElementById('stockOpening').style.color = '';
+                    document.getElementById('stockOpeningHint').textContent = '(first entry — enter manually)';
+                }
+                document.getElementById('stockProduction').value = '';
+            }
+            calcStockClosing();
+        }
+
+        function calcStockClosing() {
+            const opening = parseFloat(document.getElementById('stockOpening').value) || 0;
+            const production = parseFloat(document.getElementById('stockProduction').value) || 0;
+            const sales = parseFloat(document.getElementById('stockSalesAuto').value) || 0;
+            const closing = opening + production - sales;
+            document.getElementById('stockClosing').value = closing;
+        }
+
+        async function saveStockEntry() {
+            const date = document.getElementById('stockDate').value;
+            const product = document.getElementById('stockProduct').value;
+            const opening = parseFloat(document.getElementById('stockOpening').value);
+            const production = parseFloat(document.getElementById('stockProduction').value) || 0;
+            const sales = parseFloat(document.getElementById('stockSalesAuto').value) || 0;
+
+            if (!date || !product) return showToast('Please select date and product', 'error');
+            if (isNaN(opening)) return showToast('Please enter Opening Stock', 'error');
+
+            const closing = opening + production - sales;
+            const record = { opening, production, sales, closing, date, product, updatedAt: new Date().toISOString() };
+
+            if (!stockRecords[product]) stockRecords[product] = {};
+            stockRecords[product][date] = record;
+            await saveStockRecord(product, date, record);
+
+            showToast('Stock entry saved!', 'success');
+            clearStockForm();
+            renderStockRecords();
+        }
+
+        function clearStockForm() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('stockDate').value = today;
+            document.getElementById('stockProduct').value = '';
+            document.getElementById('stockOpening').value = '';
+            document.getElementById('stockOpening').readOnly = false;
+            document.getElementById('stockOpening').style.color = '';
+            document.getElementById('stockOpeningHint').textContent = '';
+            document.getElementById('stockProduction').value = '';
+            document.getElementById('stockSalesAuto').value = '';
+            document.getElementById('stockClosing').value = '';
+        }
+
+        function deleteStockRecord(product, date) {
+            if (!confirm(`Delete stock record for ${product} on ${formatDate(date)}?`)) return;
+            if (stockRecords[product]) delete stockRecords[product][date];
+            // Firebase delete
+            const docId = product + '|||' + date;
+            try {
+                if (db && fs) fs.deleteDoc(fs.doc(db, 'stockRecords', docId));
+                else localStorage.setItem('prata_stock', JSON.stringify(stockRecords));
+            } catch (e) { }
+            showToast('Stock record deleted', 'success');
+            renderStockRecords();
+        }
+
+        function editStockRecord(product, date) {
+            document.getElementById('stockDate').value = date;
+            document.getElementById('stockProduct').value = product;
+            refreshStockFormFields();
+            // Scroll to form
+            document.getElementById('stockEntryCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderStockRecords() {
+            const cont = document.getElementById('stockRecordsContent');
+            // Sync sales from allEntries into stockRecords (non-destructive update)
+            PRODUCTS.forEach(product => {
+                if (!stockRecords[product]) return;
+                Object.keys(stockRecords[product]).forEach(date => {
+                    const latestSales = getSalesForProduct(product, date);
+                    const rec = stockRecords[product][date];
+                    if (rec.sales !== latestSales) {
+                        rec.sales = latestSales;
+                        rec.closing = rec.opening + rec.production - latestSales;
+                    }
+                });
+            });
+
+            const productsWithData = PRODUCTS.filter(p => stockRecords[p] && Object.keys(stockRecords[p]).length > 0);
+            if (!productsWithData.length) {
+                cont.innerHTML = '<div class="empty"><i class="fas fa-boxes-stacked"></i><p>No stock records yet. Use the form above to add the first entry.</p></div>';
+                return;
+            }
+
+            cont.innerHTML = productsWithData.map(product => {
+                const dates = Object.keys(stockRecords[product]).sort((a, b) => b.localeCompare(a));
+                const latest = stockRecords[product][dates[0]];
+                const closingColor = latest.closing <= 0 ? 'var(--red)' : latest.closing <= 10 ? 'var(--amber)' : 'var(--green)';
+                const rows = dates.map(date => {
+                    const r = stockRecords[product][date];
+                    const cl = r.closing <= 0 ? 'stock-low' : '';
+                    return `<tr>
+                        <td style="font-weight:600;">${formatDate(date)}</td>
+                        <td class="num">${r.opening}</td>
+                        <td class="num" style="color:var(--accent)">${r.production}</td>
+                        <td class="num" style="color:var(--amber)">${r.sales}</td>
+                        <td class="num stock-closing-cell ${cl}">${r.closing}</td>
+                        <td class="stock-action-cell num">
+                            <button class="btn btn-ghost btn-sm" onclick="editStockRecord('${product.replace(/'/g, "\\'")}','${date}')" style="margin-right:4px;"><i class="fas fa-pen"></i></button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteStockRecord('${product.replace(/'/g, "\\'")}','${date}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                return `
+                    <div class="stock-product-header">
+                        <span class="prod-name"><i class="fas fa-box"></i> ${product}</span>
+                        <span class="prod-meta">Latest Closing: <strong style="color:${closingColor}">${latest.closing}</strong> cases</span>
+                    </div>
+                    <div class="table-wrap" style="margin-bottom:4px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th class="num">Opening</th>
+                                    <th class="num">Production</th>
+                                    <th class="num" style="color:var(--amber)">Sales (auto)</th>
+                                    <th class="num">Closing</th>
+                                    <th class="num">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── Stock Excel Export ────────────────────────────────────
+        function exportStockExcel() {
+            const rows = [['Date', 'Product', 'Opening Stock', 'Production', 'Sales', 'Closing Stock']];
+            let hasData = false;
+            PRODUCTS.forEach(product => {
+                if (!stockRecords[product]) return;
+                Object.keys(stockRecords[product]).sort().forEach(date => {
+                    const r = stockRecords[product][date];
+                    rows.push([date, product, r.opening, r.production, r.sales, r.closing]);
+                    hasData = true;
+                });
+            });
+            if (!hasData) return showToast('No stock data to export', 'error');
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 14 }, { wch: 32 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 16 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Stock Records');
+            XLSX.writeFile(wb, `PrataAqua_Stock_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Stock Excel exported!', 'success');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE 2 — COMMON RATE BOARD
+        // ═══════════════════════════════════════════════════════════
+
+        function renderRateBoard() {
+            const from = document.getElementById('rateFrom').value;
+            const to = document.getElementById('rateTo').value;
+            const entries = filterEntries(from, to);
+            const cont = document.getElementById('rateBoardContent');
+
+            if (!entries.length) {
+                cont.innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><p>No data found for selected range</p></div>';
+                return;
+            }
+
+            // Group by product → rate → total cases
+            // Structure: { product: { rate: totalQty } }
+            const grouped = {};
+            entries.forEach(e => {
+                if (!grouped[e.product]) grouped[e.product] = {};
+                const rateKey = parseFloat(e.rate).toFixed(2);
+                grouped[e.product][rateKey] = (grouped[e.product][rateKey] || 0) + e.qty;
+            });
+
+            let html = '';
+            PRODUCTS.forEach(product => {
+                if (!grouped[product]) return;
+                const rateMap = grouped[product];
+                const ratesSorted = Object.keys(rateMap).sort((a, b) => parseFloat(a) - parseFloat(b));
+                const totalCasesAllRates = ratesSorted.reduce((s, r) => s + rateMap[r], 0);
+
+                const rows = ratesSorted.map(rate => `
+                    <tr>
+                        <td><span class="rate-badge">₹${fmt(parseFloat(rate))}</span></td>
+                        <td class="num" style="color:var(--accent);font-weight:700;font-size:15px;">${rateMap[rate]}</td>
+                        <td class="num" style="color:var(--green);font-weight:600;">₹${fmt(parseFloat(rate) * rateMap[rate])}</td>
+                    </tr>`).join('');
+
+                html += `
+                    <div class="rate-group-header">
+                        <i class="fas fa-box"></i> ${product}
+                        <span style="margin-left:auto;font-size:11px;color:var(--text2);font-weight:400;">${totalCasesAllRates} total cases</span>
+                    </div>
+                    <div class="table-wrap" style="margin-bottom:4px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rate (per Case)</th>
+                                    <th class="num">Total Cases</th>
+                                    <th class="num">Total Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                                <tr class="profit-summary-row">
+                                    <td style="font-weight:700;">TOTAL</td>
+                                    <td class="num">${totalCasesAllRates}</td>
+                                    <td class="num">₹${fmt(ratesSorted.reduce((s, r) => s + parseFloat(r) * rateMap[r], 0))}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>`;
+            });
+
+            if (!html) {
+                cont.innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><p>No grouped data available</p></div>';
+                return;
+            }
+
+            // Grand summary chip
+            const grandCases = entries.reduce((s, e) => s + e.qty, 0);
+            const grandAmt = entries.reduce((s, e) => s + e.amount, 0);
+            html += `<div class="rate-total-chip" style="margin-top:16px;">
+                <span style="font-size:13px;color:var(--text2);font-weight:600;"><i class="fas fa-sigma"></i> Grand Total</span>
+                <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--green);">${grandCases} cases · ₹${fmt(grandAmt)}</span>
+            </div>`;
+
+            cont.innerHTML = html;
+        }
+
+        function clearRateBoardFilter() {
+            document.getElementById('rateFrom').value = '';
+            document.getElementById('rateTo').value = '';
+            renderRateBoard();
+        }
+
+        // ── Hook stock load into Firebase init ────────────────────
+        // Piggyback on firebase-ready to also load stockRecords
+        window.addEventListener('firebase-ready', async () => {
+            await loadStockRecords();
+        });
+
+        // Patch initDemoMode to also load stock from localStorage
+        const _origInitDemoMode = initDemoMode;
+        initDemoMode = function () {
+            _origInitDemoMode();
+            stockRecords = JSON.parse(localStorage.getItem('prata_stock') || '{}');
+            renderStockRecords();
+            renderRateBoard();
+        };
+
+        // ── LOGIN GATE ──────────────────────────────────────────────
+        (function () {
+            // If already logged in this session, skip the gate
+            if (sessionStorage.getItem('prata_auth') === '1') {
+                document.getElementById('login-overlay').classList.add('hidden');
+            }
+        })();
+
+        function doLogin() {
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value;
+            const err = document.getElementById('login-error');
+            if (u === 'prata@gmail.com' && p === 'prata@1702') {
+                sessionStorage.setItem('prata_auth', '1');
+                document.getElementById('login-overlay').classList.add('hidden');
+                err.textContent = '';
+            } else {
+                err.textContent = 'Invalid user ID or password. Please try again.';
+                document.getElementById('login-pass').value = '';
+                document.getElementById('login-pass').focus();
+            }
+        }
+
+        // Allow pressing Enter to submit login
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !document.getElementById('login-overlay').classList.contains('hidden')) {
+                doLogin();
+            }
+        });
+    </script>
+</body>
+
+</html>
