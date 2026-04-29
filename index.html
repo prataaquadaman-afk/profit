@@ -918,6 +918,51 @@
             margin-top: 10px;
         }
 
+        /* ── SOLD FROM TOGGLE ── */
+        .sold-to-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 2px;
+        }
+        .sold-to-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: var(--r2);
+            border: 1.5px solid var(--border);
+            background: var(--surface2);
+            color: var(--text2);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .sold-to-btn.active-shop {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+        .sold-to-btn.active-company {
+            border-color: var(--amber);
+            background: var(--amber-dim);
+            color: var(--amber);
+        }
+        .tag-shop {
+            background: var(--accent-glow);
+            color: var(--accent);
+            border: 1px solid rgba(0,198,255,0.25);
+        }
+        .tag-company {
+            background: var(--amber-dim);
+            color: var(--amber);
+            border: 1px solid rgba(255,179,71,0.25);
+        }
+
         /* ── LOGIN OVERLAY ── */
         #login-overlay {
             position: fixed;
@@ -1098,6 +1143,14 @@
                 <i class="fas fa-layer-group"></i> Common Rate Board
             </button>
 
+            <div class="nav-section-label" style="margin-top:12px">Sale Reports</div>
+            <button class="nav-btn" onclick="showPage('shopreport')" data-page="shopreport">
+                <i class="fas fa-store"></i> Shop Report
+            </button>
+            <button class="nav-btn" onclick="showPage('companyreport')" data-page="companyreport">
+                <i class="fas fa-building"></i> Company Report
+            </button>
+
             <div class="nav-section-label" style="margin-top:12px">Settings</div>
             <button class="nav-btn" onclick="requestAccess('costprice')" data-page="costprice">
                 <i class="fas fa-tags"></i> Cost Prices
@@ -1169,6 +1222,18 @@
                             <label>AMOUNT (Auto-calculated ₹)</label>
                             <input type="text" id="entryAmount" readonly placeholder="₹ 0.00">
                         </div>
+                        <div class="form-group full">
+                            <label>SOLD FROM</label>
+                            <div class="sold-to-group">
+                                <div class="sold-to-btn active-shop" id="soldToShopBtn" onclick="setSoldTo('shop')">
+                                    <i class="fas fa-store"></i> Shop
+                                </div>
+                                <div class="sold-to-btn" id="soldToCompanyBtn" onclick="setSoldTo('company')">
+                                    <i class="fas fa-building"></i> Company
+                                </div>
+                            </div>
+                            <input type="hidden" id="entrySoldTo" value="shop">
+                        </div>
                     </div>
                     <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
                         <button class="btn btn-primary" id="saveBtn" onclick="saveEntry()">
@@ -1191,6 +1256,7 @@
                                     <th class="num">Cases</th>
                                     <th class="num">Rate</th>
                                     <th class="num">Amount</th>
+                                    <th>SOLD FROM</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -1525,6 +1591,56 @@
                 </div>
             </div>
 
+            <!-- ═══ PAGE: SHOP REPORT ═══ -->
+            <div class="page" id="page-shopreport">
+                <div class="page-header">
+                    <div class="page-title"><i class="fas fa-store" style="color:var(--accent);margin-right:8px;"></i>Shop Report</div>
+                    <div class="page-sub">Sales entries marked as "Shop" — filtered &amp; exportable</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="shopReportFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="shopReportTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderShopReport()"><i class="fas fa-filter"></i> Filter</button>
+                    <button class="btn btn-ghost" onclick="clearSaleReportFilter('shop')"><i class="fas fa-refresh"></i> All</button>
+                    <button class="btn btn-success" onclick="exportSaleReportExcel('shop')"><i class="fas fa-file-excel"></i> Export Excel</button>
+                </div>
+                <div id="shopReportStats" class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;"></div>
+                <div id="shopReportContent">
+                    <div class="empty"><i class="fas fa-store"></i><p>Loading...</p></div>
+                </div>
+            </div>
+
+            <!-- ═══ PAGE: COMPANY REPORT ═══ -->
+            <div class="page" id="page-companyreport">
+                <div class="page-header">
+                    <div class="page-title"><i class="fas fa-building" style="color:var(--amber);margin-right:8px;"></i>Company Report</div>
+                    <div class="page-sub">Sales entries marked as "Company" — filtered &amp; exportable</div>
+                </div>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>FROM DATE</label>
+                        <input type="date" id="companyReportFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>TO DATE</label>
+                        <input type="date" id="companyReportTo">
+                    </div>
+                    <button class="btn btn-primary" onclick="renderCompanyReport()"><i class="fas fa-filter"></i> Filter</button>
+                    <button class="btn btn-ghost" onclick="clearSaleReportFilter('company')"><i class="fas fa-refresh"></i> All</button>
+                    <button class="btn btn-success" onclick="exportSaleReportExcel('company')"><i class="fas fa-file-excel"></i> Export Excel</button>
+                </div>
+                <div id="companyReportStats" class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;"></div>
+                <div id="companyReportContent">
+                    <div class="empty"><i class="fas fa-building"></i><p>Loading...</p></div>
+                </div>
+            </div>
+
         </div><!-- /main -->
     </div><!-- /app -->
 
@@ -1560,6 +1676,18 @@
                 <div class="form-group full">
                     <label>AMOUNT (₹)</label>
                     <input type="text" id="editAmount" readonly>
+                </div>
+                <div class="form-group full">
+                    <label>SOLD FROM</label>
+                    <div class="sold-to-group">
+                        <div class="sold-to-btn active-shop" id="editSoldToShopBtn" onclick="setEditSoldTo('shop')">
+                            <i class="fas fa-store"></i> Shop
+                        </div>
+                        <div class="sold-to-btn" id="editSoldToCompanyBtn" onclick="setEditSoldTo('company')">
+                            <i class="fas fa-building"></i> Company
+                        </div>
+                    </div>
+                    <input type="hidden" id="editSoldTo" value="shop">
                 </div>
             </div>
             <div class="modal-actions">
@@ -1779,13 +1907,14 @@
             const qty = parseFloat(document.getElementById('entryQty').value);
             const rate = parseFloat(document.getElementById('entryRate').value);
             const amount = qty * rate;
+            const soldTo = document.getElementById('entrySoldTo').value || 'shop';
 
             if (!date || !product || !qty || !rate) return showToast('Please fill all fields', 'error');
 
             const btn = document.getElementById('saveBtn');
             btn.disabled = true;
 
-            const entry = { date, product, qty, rate, amount, createdAt: new Date().toISOString() };
+            const entry = { date, product, qty, rate, amount, soldTo, createdAt: new Date().toISOString() };
 
             try {
                 if (db && fs) {
@@ -1856,9 +1985,10 @@
             const qty = parseFloat(document.getElementById('editQty').value);
             const rate = parseFloat(document.getElementById('editRate').value);
             const amount = qty * rate;
+            const soldTo = document.getElementById('editSoldTo').value || 'shop';
             if (!date || !product || !qty || !rate) return showToast('Fill all fields', 'error');
 
-            const updates = { date, product, qty, rate, amount, edited: true, editedAt: new Date().toISOString() };
+            const updates = { date, product, qty, rate, amount, soldTo, edited: true, editedAt: new Date().toISOString() };
             try {
                 if (db && fs) await fs.updateDoc(fs.doc(db, 'sales', editingId), updates);
                 allEntries = allEntries.map(e => e.id === editingId ? { ...e, ...updates } : e);
@@ -1924,6 +2054,8 @@
             renderProfit();
             renderAdmin();
             renderCostPrices();
+            renderShopReport();
+            renderCompanyReport();
         }
 
         function renderTodayStats() {
@@ -1941,18 +2073,25 @@
             const todayData = allEntries.filter(e => e.date === today);
             const tbody = document.getElementById('todayEntriesBody');
             if (!todayData.length) {
-                tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><p>No entries today</p></div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i><p>No entries today</p></div></td></tr>';
                 return;
             }
-            tbody.innerHTML = todayData.map(e => `
+            tbody.innerHTML = todayData.map(e => {
+                const st = e.soldTo || 'shop';
+                const stTag = st === 'company'
+                    ? '<span class="tag tag-company" style="font-size:10px;"><i class="fas fa-building"></i> Company</span>'
+                    : '<span class="tag tag-shop" style="font-size:10px;"><i class="fas fa-store"></i> Shop</span>';
+                return `
     <tr>
       <td>${shortProduct(e.product)}${e.edited ? ' <span class="tag tag-amber" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Edited</span>' : ''}</td>
       <td class="num"><span class="tag tag-blue">${e.qty}</span></td>
       <td class="num">₹${fmt(e.rate)}</td>
       <td class="num" style="color:var(--green);font-weight:600">₹${fmt(e.amount)}</td>
+      <td>${stTag}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="openEdit('${e.id}')"><i class="fas fa-pen"></i></button></td>
     </tr>
-  `).join('');
+  `;
+            }).join('');
         }
 
         function renderDailySales() {
@@ -2357,9 +2496,191 @@
             document.getElementById('editQty').value = e.qty;
             document.getElementById('editRate').value = e.rate;
             document.getElementById('editAmount').value = '₹ ' + fmt(e.amount);
+            setEditSoldTo(e.soldTo || 'shop');
             document.getElementById('editModal').classList.remove('hidden');
         }
         function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editingId = null; }
+
+        // ── SOLD FROM Toggle ─────────────────────────────────────────
+        function setSoldTo(type) {
+            document.getElementById('entrySoldTo').value = type;
+            const shopBtn = document.getElementById('soldToShopBtn');
+            const compBtn = document.getElementById('soldToCompanyBtn');
+            shopBtn.className = 'sold-to-btn' + (type === 'shop' ? ' active-shop' : '');
+            compBtn.className = 'sold-to-btn' + (type === 'company' ? ' active-company' : '');
+        }
+
+        function setEditSoldTo(type) {
+            document.getElementById('editSoldTo').value = type;
+            const shopBtn = document.getElementById('editSoldToShopBtn');
+            const compBtn = document.getElementById('editSoldToCompanyBtn');
+            shopBtn.className = 'sold-to-btn' + (type === 'shop' ? ' active-shop' : '');
+            compBtn.className = 'sold-to-btn' + (type === 'company' ? ' active-company' : '');
+        }
+
+        // ── Shop / Company Report Render ───────────────────────────
+        function _renderSaleReport(type) {
+            const fromId = type === 'shop' ? 'shopReportFrom' : 'companyReportFrom';
+            const toId   = type === 'shop' ? 'shopReportTo'   : 'companyReportTo';
+            const contId = type === 'shop' ? 'shopReportContent' : 'companyReportContent';
+            const statsId= type === 'shop' ? 'shopReportStats' : 'companyReportStats';
+            const from = document.getElementById(fromId).value;
+            const to   = document.getElementById(toId).value;
+            const icon = type === 'shop' ? 'fa-store' : 'fa-building';
+            const colorAccent = type === 'shop' ? 'var(--accent)' : 'var(--amber)';
+            const tagClass = type === 'shop' ? 'tag-shop' : 'tag-company';
+
+            // Filter by soldTo and date range
+            const entries = allEntries.filter(e => {
+                const st = e.soldTo || 'shop';
+                if (st !== type) return false;
+                if (from && e.date < from) return false;
+                if (to   && e.date > to)   return false;
+                return true;
+            });
+
+            // Stats
+            const totalEntries = entries.length;
+            const totalCases   = entries.reduce((s,e) => s + e.qty, 0);
+            const totalAmount  = entries.reduce((s,e) => s + e.amount, 0);
+            const statsEl = document.getElementById(statsId);
+            statsEl.innerHTML = `
+                <div class="stat-chip"><div class="label">TOTAL ENTRIES</div><div class="value accent">${totalEntries}</div></div>
+                <div class="stat-chip"><div class="label">TOTAL CASES</div><div class="value">${totalCases}</div></div>
+                <div class="stat-chip"><div class="label">TOTAL SALES</div><div class="value green">₹${fmt(totalAmount)}</div></div>`;
+
+            const cont = document.getElementById(contId);
+            if (!entries.length) {
+                cont.innerHTML = `<div class="empty"><i class="fas ${icon}"></i><p>No ${type} entries found</p></div>`;
+                return;
+            }
+
+            // Group by date
+            const byDate = {};
+            entries.forEach(e => {
+                if (!byDate[e.date]) byDate[e.date] = [];
+                byDate[e.date].push(e);
+            });
+            const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+
+            cont.innerHTML = dates.map(date => {
+                const dayEntries = byDate[date];
+                const dayCases  = dayEntries.reduce((s,e) => s + e.qty, 0);
+                const dayAmt    = dayEntries.reduce((s,e) => s + e.amount, 0);
+                const rows = dayEntries.map(e => `
+                    <tr>
+                        <td>${e.product}${e.edited ? ' <span class="tag tag-amber" style="font-size:9px;padding:2px 5px;">Edited</span>':''}  </td>
+                        <td class="num"><span class="tag tag-blue">${e.qty}</span></td>
+                        <td class="num">₹${fmt(e.rate)}</td>
+                        <td class="num" style="color:var(--green);font-weight:600">₹${fmt(e.amount)}</td>
+                    </tr>`).join('');
+                return `
+                    <div class="date-group-header">
+                        <span><i class="fas fa-calendar-day"></i> ${formatDate(date)}</span>
+                        <span style="color:var(--text2);font-size:12px">${dayCases} cases · ₹${fmt(dayAmt)}</span>
+                    </div>
+                    <div class="table-wrap" style="margin-bottom:8px;">
+                        <table>
+                            <thead><tr><th>Product</th><th class="num">Cases</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderShopReport()    { _renderSaleReport('shop'); }
+        function renderCompanyReport() { _renderSaleReport('company'); }
+
+        function clearSaleReportFilter(type) {
+            if (type === 'shop') {
+                document.getElementById('shopReportFrom').value = '';
+                document.getElementById('shopReportTo').value   = '';
+                renderShopReport();
+            } else {
+                document.getElementById('companyReportFrom').value = '';
+                document.getElementById('companyReportTo').value   = '';
+                renderCompanyReport();
+            }
+        }
+
+        // ── Export Shop / Company Report to Excel ──────────────────
+        function exportSaleReportExcel(type) {
+            const fromId = type === 'shop' ? 'shopReportFrom' : 'companyReportFrom';
+            const toId   = type === 'shop' ? 'shopReportTo'   : 'companyReportTo';
+            const from = document.getElementById(fromId).value;
+            const to   = document.getElementById(toId).value;
+
+            const entries = allEntries.filter(e => {
+                const st = e.soldTo || 'shop';
+                if (st !== type) return false;
+                if (from && e.date < from) return false;
+                if (to   && e.date > to)   return false;
+                return true;
+            });
+
+            if (!entries.length) return showToast('No ' + type + ' data to export', 'error');
+
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Pivot by date × product
+            const pivotData = [];
+            const r1 = ['Date'];
+            PRODUCTS.forEach((p, i) => r1.push(i === 0 ? 'CASES SOLD' : ''));
+            PRODUCTS.forEach((p, i) => r1.push(i === 0 ? 'SELLING AMT (₹)' : ''));
+            PRODUCTS.forEach((p, i) => r1.push(i === 0 ? 'AVG RATE/CASE (₹)' : ''));
+            r1.push('Day Total Cases'); r1.push('Day Total Amount (₹)');
+            pivotData.push(r1);
+
+            const r2 = [''];
+            for (let i = 0; i < 3; i++) PRODUCTS.forEach(p => r2.push(p));
+            r2.push(''); r2.push('');
+            pivotData.push(r2);
+
+            const byDate = {};
+            entries.forEach(e => {
+                if (!byDate[e.date]) byDate[e.date] = [];
+                byDate[e.date].push(e);
+            });
+            Object.keys(byDate).sort((a,b) => b.localeCompare(a)).forEach(date => {
+                const byProduct = {};
+                byDate[date].forEach(e => {
+                    if (!byProduct[e.product]) byProduct[e.product] = { qty: 0, amount: 0 };
+                    byProduct[e.product].qty    += e.qty;
+                    byProduct[e.product].amount += e.amount;
+                });
+                const row = [date];
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty    || '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.amount ? parseFloat(byProduct[p].amount.toFixed(2)) : '-'));
+                PRODUCTS.forEach(p => row.push(byProduct[p]?.qty    ? parseFloat((byProduct[p].amount / byProduct[p].qty).toFixed(2)) : '-'));
+                const dayCases = Object.values(byProduct).reduce((s,v) => s + v.qty, 0);
+                const dayAmt   = Object.values(byProduct).reduce((s,v) => s + v.amount, 0);
+                row.push(dayCases); row.push(parseFloat(dayAmt.toFixed(2)));
+                pivotData.push(row);
+            });
+
+            const ws1 = XLSX.utils.aoa_to_sheet(pivotData);
+            ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }];
+            for (let block = 0; block < 3; block++) {
+                const startCol = 1 + block * PRODUCTS.length;
+                ws1['!merges'].push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + PRODUCTS.length - 1 } });
+            }
+            XLSX.utils.book_append_sheet(wb, ws1, (type === 'shop' ? 'Shop' : 'Company') + ' Pivot');
+
+            // Sheet 2: Raw line-by-line
+            const rawData = [['Date', 'Product', 'Cases', 'Rate (₹)', 'Amount (₹)', 'SOLD FROM']];
+            entries.sort((a,b) => b.date.localeCompare(a.date)).forEach(e =>
+                rawData.push([e.date, e.product, e.qty, e.rate, e.amount, e.soldTo || 'shop'])
+            );
+            const ws2 = XLSX.utils.aoa_to_sheet(rawData);
+            ws2['!cols'] = [{wch:14},{wch:32},{wch:10},{wch:12},{wch:14},{wch:10}];
+            XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            const label = type === 'shop' ? 'Shop' : 'Company';
+            const rangeSuffix = (from && to) ? `_${from}_to_${to}` : `_${dateStr}`;
+            XLSX.writeFile(wb, `PrataAqua_${label}Report${rangeSuffix}.xlsx`);
+            showToast(label + ' Report exported!', 'success');
+        }
 
         // ═══════════════════════════════════════════════════════════
         // USER AUTH — multi-password gate for protected sections
@@ -2513,6 +2834,8 @@
             if (page === 'admin') renderAdmin();
             if (page === 'stock') { setStockDefaultDate(); renderStockRecords(); }
             if (page === 'rateboard') renderRateBoard();
+            if (page === 'shopreport') renderShopReport();
+            if (page === 'companyreport') renderCompanyReport();
         }
 
         function clearForm() {
@@ -2522,6 +2845,7 @@
             document.getElementById('entryQty').value = '';
             document.getElementById('entryRate').value = '';
             document.getElementById('entryAmount').value = '';
+            setSoldTo('shop');
         }
 
         function clearDateFilter(page) {
